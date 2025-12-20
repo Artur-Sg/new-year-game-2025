@@ -15,6 +15,10 @@ export function createGameConfig(): Phaser.Types.Core.GameConfig {
     height: GAME_HEIGHT,
     parent: 'app',
     backgroundColor: '#0d0f1d',
+    pixelArt: true,
+    roundPixels: true,
+    antialias: false,
+    antialiasGL: false,
     scene: [BootScene, PreloadScene, MainMenuScene, GameScene, UIScene],
     physics: {
       default: 'arcade',
@@ -24,7 +28,7 @@ export function createGameConfig(): Phaser.Types.Core.GameConfig {
       },
     },
     scale: {
-      mode: Phaser.Scale.FIT,
+      mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
   };

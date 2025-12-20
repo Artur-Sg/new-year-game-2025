@@ -42,6 +42,10 @@ export class CollectibleField {
     this.group.clear(true, true);
   }
 
+  setBounds(bounds: Phaser.Geom.Rectangle): void {
+    this.bounds = bounds;
+  }
+
   private randomPoint(): Phaser.Math.Vector2 {
     const x = Phaser.Math.Between(this.bounds.left, this.bounds.right);
     const y = Phaser.Math.Between(this.bounds.top, this.bounds.bottom);

@@ -5,37 +5,46 @@ import { EventBus } from '../events/EventBus';
 import { GameEvents } from '../constants/GameEvents';
 
 export class MainMenuScene extends Phaser.Scene {
+  private titleText!: Phaser.GameObjects.Text;
+  private subtitleText!: Phaser.GameObjects.Text;
+  private startButton!: Phaser.GameObjects.Text;
+  private howToButton!: Phaser.GameObjects.Text;
+
   constructor() {
     super(SceneKeys.MAIN_MENU);
   }
 
   create(): void {
-    const centerX = GAME_WIDTH / 2;
-    const title = this.add.text(centerX, 130, 'New Year Game 2025', {
+    this.titleText = this.add.text(0, 0, 'New Year Game 2025', {
       fontSize: '28px',
       color: '#ffffff',
       fontFamily: 'Press Start 2P, monospace',
     });
-    title.setOrigin(0.5);
+    this.titleText.setOrigin(0.5);
 
-    const subtitle = this.add.text(centerX, 190, 'Collect the wishes and beat the clock!', {
+    this.subtitleText = this.add.text(0, 0, 'Collect the wishes and beat the clock!', {
       fontSize: '12px',
       color: '#a5c6ff',
       align: 'center',
       wordWrap: { width: 540 },
       fontFamily: 'Press Start 2P, monospace',
     });
-    subtitle.setOrigin(0.5);
+    this.subtitleText.setOrigin(0.5);
 
-    const startButton = this.createButton(centerX, 300, 'Start');
-    startButton.on('pointerup', () => {
+    this.startButton = this.createButton(0, 0, 'Start');
+    this.startButton.on('pointerup', () => {
       EventBus.emit(GameEvents.START);
       this.scene.start(SceneKeys.GAME);
       this.scene.launch(SceneKeys.UI);
     });
 
-    this.createButton(centerX, 360, 'How to play')
+    this.howToButton = this.createButton(0, 0, 'How to play')
       .on('pointerup', () => this.showHowToPlay());
+
+    this.layout(this.scale.width, this.scale.height);
+    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+      this.layout(gameSize.width, gameSize.height);
+    });
   }
 
   private createButton(x: number, y: number, label: string): Phaser.GameObjects.Text {
@@ -55,8 +64,23 @@ export class MainMenuScene extends Phaser.Scene {
     return button;
   }
 
+  private layout(width: number, height: number): void {
+    const centerX = width / 2;
+    this.titleText.setPosition(centerX, height * (130 / GAME_HEIGHT));
+    this.subtitleText.setPosition(centerX, height * (190 / GAME_HEIGHT));
+    this.startButton.setPosition(centerX, height * (300 / GAME_HEIGHT));
+    this.howToButton.setPosition(centerX, height * (360 / GAME_HEIGHT));
+
+    const wrapWidth = Math.min(540, Math.max(280, width - 120));
+    this.subtitleText.setWordWrapWidth(wrapWidth);
+  }
+
   private showHowToPlay(): void {
-    const modal = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 520, 220, 0x0b0d1a, 0.9);
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const modalWidth = Math.min(520, Math.max(320, width - 80));
+    const modalHeight = Math.min(220, Math.max(180, height - 120));
+    const modal = this.add.rectangle(width / 2, height / 2, modalWidth, modalHeight, 0x0b0d1a, 0.9);
     modal.setStrokeStyle(3, 0xffe066, 0.8);
 
     const text = this.add.text(modal.x, modal.y, 'Move with arrows or WASD\nCollect glowing wishes\nBeat your best time!', {
@@ -64,6 +88,7 @@ export class MainMenuScene extends Phaser.Scene {
       color: '#ffffff',
       align: 'center',
       lineSpacing: 10,
+      wordWrap: { width: modalWidth - 40 },
       fontFamily: 'Press Start 2P, monospace',
     });
     text.setOrigin(0.5);

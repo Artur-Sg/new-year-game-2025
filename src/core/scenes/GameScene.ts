@@ -14,6 +14,9 @@ export class GameScene extends Phaser.Scene {
   private collectibles!: CollectibleField;
   private state = new GameState();
   private lastSecond = 0;
+  private backdropZone!: Phaser.GameObjects.Zone;
+  private backdropEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private backdropFrame!: Phaser.GameObjects.Rectangle;
 
   constructor() {
     super(SceneKeys.GAME);
@@ -21,8 +24,6 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#0d0f1d');
-    this.physics.world.setBounds(32, 32, GAME_WIDTH - 64, GAME_HEIGHT - 64);
-
     this.spawnBackdrop();
 
     this.player = new Player(
@@ -43,6 +44,11 @@ export class GameScene extends Phaser.Scene {
     this.state.start();
     EventBus.emit(GameEvents.READY);
     EventBus.emit(GameEvents.SCORE_UPDATED, this.state.getScore());
+
+    this.layout(this.scale.width, this.scale.height);
+    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+      this.layout(gameSize.width, gameSize.height);
+    });
   }
 
   update(): void {
@@ -58,21 +64,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnBackdrop(): void {
-    const zone = this.add.zone(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT);
+    this.backdropZone = this.add.zone(GAME_WIDTH / 2, GAME_HEIGHT / 2, GAME_WIDTH, GAME_HEIGHT);
     const particles = this.add.particles(0xffe066);
 
-    particles.createEmitter({
-      x: zone.x,
-      y: zone.y,
+    this.backdropEmitter = particles.createEmitter({
+      x: this.backdropZone.x,
+      y: this.backdropZone.y,
       quantity: 2,
       lifespan: { min: 1200, max: 2400 },
       speed: { min: 10, max: 40 },
       scale: { start: 0.6, end: 0 },
       blendMode: 'ADD',
-      emitZone: { source: new Phaser.Geom.Rectangle(-zone.width / 2, -zone.height / 2, zone.width, zone.height) },
+      emitZone: {
+        source: new Phaser.Geom.Rectangle(
+          -this.backdropZone.width / 2,
+          -this.backdropZone.height / 2,
+          this.backdropZone.width,
+          this.backdropZone.height
+        ),
+      },
     });
 
-    const frame = this.add.rectangle(
+    this.backdropFrame = this.add.rectangle(
       GAME_WIDTH / 2,
       GAME_HEIGHT / 2,
       GAME_WIDTH - 24,
@@ -80,6 +93,30 @@ export class GameScene extends Phaser.Scene {
       0x0f162a,
       0.6
     );
-    frame.setStrokeStyle(4, 0xffe066, 0.8);
+    this.backdropFrame.setStrokeStyle(4, 0xffe066, 0.8);
+  }
+
+  private layout(width: number, height: number): void {
+    this.physics.world.setBounds(32, 32, width - 64, height - 64);
+    if (this.player) {
+      const collider = this.player.getCollider();
+      const bounds = this.physics.world.bounds;
+      collider.setPosition(
+        Phaser.Math.Clamp(collider.x, bounds.left + 16, bounds.right - 16),
+        Phaser.Math.Clamp(collider.y, bounds.top + 16, bounds.bottom - 16)
+      );
+    }
+
+    this.backdropZone.setPosition(width / 2, height / 2);
+    this.backdropZone.setSize(width, height);
+    this.backdropEmitter.setPosition(this.backdropZone.x, this.backdropZone.y);
+    this.backdropEmitter.setEmitZone({
+      source: new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height),
+    });
+
+    this.backdropFrame.setPosition(width / 2, height / 2);
+    this.backdropFrame.setSize(width - 24, height - 24);
+
+    this.collectibles.setBounds(new Phaser.Geom.Rectangle(64, 64, width - 128, height - 128));
   }
 }

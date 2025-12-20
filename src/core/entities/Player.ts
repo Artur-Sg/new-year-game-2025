@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH } from '../config/gameConfig';
 
 export class Player {
   private sprite: Phaser.GameObjects.Arc;
@@ -32,6 +31,6 @@ export class Player {
 
   resetPosition(): void {
     this.body.stop();
-    this.sprite.setPosition(GAME_WIDTH / 2, GAME_HEIGHT / 2);
+    this.sprite.setPosition(this.scene.scale.width / 2, this.scene.scale.height / 2);
   }
 }
