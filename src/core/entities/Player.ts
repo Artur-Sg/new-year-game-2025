@@ -1,36 +1,76 @@
 import Phaser from 'phaser';
 
 export class Player {
-  private sprite: Phaser.GameObjects.Arc;
+  private sprite: Phaser.Physics.Arcade.Sprite;
   private body: Phaser.Physics.Arcade.Body;
-  private readonly speed = 240;
+  private readonly speed = 260;
+  private forcedAnimation: string | null = null;
 
   constructor(private scene: Phaser.Scene, position: Phaser.Math.Vector2) {
-    this.sprite = scene.add.circle(position.x, position.y, 14, 0xffe066, 0.95);
-    this.sprite.setStrokeStyle(2, 0xffffff, 0.6);
-    scene.physics.add.existing(this.sprite);
+    this.sprite = scene.physics.add.sprite(position.x, position.y, 'cat-hero', 0);
+    this.sprite.setScale(1.5);
+    this.sprite.setDepth(5);
 
     this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
-    this.body.setCircle(14);
+    this.body.setSize(40, 28, true);
     this.body.setCollideWorldBounds(true);
+    this.body.setDamping(true);
+    this.body.setDrag(0.85);
+    this.body.setMaxVelocity(this.speed, this.speed);
+
+    this.sprite.play('cat-idle');
   }
 
   update(direction: Phaser.Math.Vector2): void {
-    const velocity = direction.normalize().scale(this.speed);
+    const velocity = direction.clone();
+    if (velocity.lengthSq() > 0) {
+      velocity.normalize().scale(this.speed);
+    }
     this.body.setVelocity(velocity.x, velocity.y);
 
-    if (velocity.lengthSq() > 0) {
-      const angle = Phaser.Math.RadToDeg(Math.atan2(velocity.y, velocity.x));
-      this.sprite.setAngle(angle);
-    }
+    this.updateAnimation(direction);
   }
 
-  getCollider(): Phaser.GameObjects.Arc {
+  getCollider(): Phaser.GameObjects.Sprite {
     return this.sprite;
+  }
+
+  private updateAnimation(direction: Phaser.Math.Vector2): void {
+    if (this.forcedAnimation) {
+      this.sprite.play(this.forcedAnimation, true);
+      return;
+    }
+
+    const absX = Math.abs(direction.x);
+    const absY = Math.abs(direction.y);
+
+    if (absX === 0 && absY === 0) {
+      this.sprite.play('cat-idle', true);
+      return;
+    }
+
+    if (absY >= absX) {
+      if (direction.y < 0) {
+        this.sprite.play('cat-up', true);
+      } else {
+        this.sprite.play('cat-down', true);
+      }
+      return;
+    }
+
+    if (direction.x > 0) {
+      this.sprite.play('cat-forward', true);
+    } else {
+      this.sprite.play('cat-backward', true);
+    }
   }
 
   resetPosition(): void {
     this.body.stop();
     this.sprite.setPosition(this.scene.scale.width / 2, this.scene.scale.height / 2);
+  }
+
+  setForcedAnimation(key: string | null): void {
+    this.forcedAnimation = key;
   }
 }

@@ -21,6 +21,12 @@ export class PreloadScene extends Phaser.Scene {
       progressBox.destroy();
       progressBar.destroy();
     });
+
+    const catHeroUrl = new URL('../../assets/cat-hero.png', import.meta.url).toString();
+    this.load.spritesheet('cat-hero', catHeroUrl, {
+      frameWidth: 64,
+      frameHeight: 48,
+    });
   }
 
   create(): void {

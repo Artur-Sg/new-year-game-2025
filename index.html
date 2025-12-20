@@ -19,5 +19,24 @@
   <body>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
+    <script src="https://unpkg.com/magic-snowflakes/dist/snowflakes.min.js"></script>
+    <div class="background-container"></div>
+    <div id="snowflakes-container"></div>
+    <script type="text/javascript">
+        new Snowflakes({
+            color: 'white', // Default: "#5ECDEF"
+            count: 150, // 100 snowflakes. Default: 50
+            minOpacity: 0.1, // From 0 to 1. Default: 0.6
+            maxOpacity: 0.8, // From 0 to 1. Default: 1
+            minSize: 15, // Default: 10
+            maxSize: 35, // Default: 25
+            rotation: true, // Default: true
+            speed: 1, // The property affects the speed of falling. Default: 1
+            wind: true, // Without wind. Default: true
+            zIndex: 100, // Default: 9999,
+            autoResize: true // Default: true
+        });
+    </script>
+    <script type="text/javascript" src="./main.js"></script>
   </body>
 </html>

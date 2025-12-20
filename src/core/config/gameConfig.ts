@@ -7,6 +7,7 @@ import { UIScene } from '../scenes/UIScene';
 
 export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
+export const LEVEL_ONE_TARGET = 10;
 
 export function createGameConfig(): Phaser.Types.Core.GameConfig {
   return {

@@ -9,6 +9,7 @@ export class MainMenuScene extends Phaser.Scene {
   private subtitleText!: Phaser.GameObjects.Text;
   private startButton!: Phaser.GameObjects.Text;
   private howToButton!: Phaser.GameObjects.Text;
+  private resizeHandler?: (gameSize: Phaser.Structs.Size) => void;
 
   constructor() {
     super(SceneKeys.MAIN_MENU);
@@ -22,7 +23,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
     this.titleText.setOrigin(0.5);
 
-    this.subtitleText = this.add.text(0, 0, 'Collect the wishes and beat the clock!', {
+    this.subtitleText = this.add.text(0, 0, "Fly and collect Santa's lost gifts!", {
       fontSize: '12px',
       color: '#a5c6ff',
       align: 'center',
@@ -42,8 +43,14 @@ export class MainMenuScene extends Phaser.Scene {
       .on('pointerup', () => this.showHowToPlay());
 
     this.layout(this.scale.width, this.scale.height);
-    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+    this.resizeHandler = (gameSize: Phaser.Structs.Size) => {
       this.layout(gameSize.width, gameSize.height);
+    };
+    this.scale.on('resize', this.resizeHandler);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.resizeHandler) {
+        this.scale.off('resize', this.resizeHandler);
+      }
     });
   }
 
@@ -83,7 +90,7 @@ export class MainMenuScene extends Phaser.Scene {
     const modal = this.add.rectangle(width / 2, height / 2, modalWidth, modalHeight, 0x0b0d1a, 0.9);
     modal.setStrokeStyle(3, 0xffe066, 0.8);
 
-    const text = this.add.text(modal.x, modal.y, 'Move with arrows or WASD\nCollect glowing wishes\nBeat your best time!', {
+    const text = this.add.text(modal.x, modal.y, 'Fly with arrows or WASD\nCollect 10 gifts\nFinish the level!', {
       fontSize: '14px',
       color: '#ffffff',
       align: 'center',
