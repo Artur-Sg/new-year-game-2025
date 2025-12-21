@@ -27,6 +27,11 @@ export class PreloadScene extends Phaser.Scene {
       frameWidth: 64,
       frameHeight: 48,
     });
+    const xmasCatUrl = new URL('../../assets/xmascat.png', import.meta.url).toString();
+    this.load.spritesheet('xmascat', xmasCatUrl, {
+      frameWidth: 258,
+      frameHeight: 196,
+    });
   }
 
   create(): void {
