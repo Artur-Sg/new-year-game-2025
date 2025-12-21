@@ -1,13 +1,22 @@
 import Phaser from 'phaser';
 import { BootScene } from '../scenes/BootScene';
-import { GameScene } from '../scenes/GameScene';
-import { MainMenuScene } from '../scenes/MainMenuScene';
 import { PreloadScene } from '../scenes/PreloadScene';
-import { UIScene } from '../scenes/UIScene';
 
 export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
 export const LEVEL_ONE_TARGET = 10;
+export const UI_TEXT_SCALE = 1;
+export const UI_FONT_FAMILY = '"Press Start 2P", monospace';
+
+export function getTextScale(width: number, height: number): number {
+  const scale = Math.min(width / GAME_WIDTH, height / GAME_HEIGHT);
+  const clamped = Math.max(0.9, Math.min(1.4, scale));
+  return clamped * UI_TEXT_SCALE;
+}
+
+export function toFont(basePx: number, scale: number): string {
+  return `${Math.round(basePx * scale)}px ${UI_FONT_FAMILY}`;
+}
 
 
 export function createGameConfig(): Phaser.Types.Core.GameConfig {
@@ -21,7 +30,7 @@ export function createGameConfig(): Phaser.Types.Core.GameConfig {
     roundPixels: true,
     antialias: false,
     antialiasGL: false,
-    scene: [BootScene, PreloadScene, MainMenuScene, GameScene, UIScene],
+    scene: [BootScene, PreloadScene],
     physics: {
       default: 'arcade',
       arcade: {

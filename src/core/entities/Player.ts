@@ -24,7 +24,7 @@ export class Player {
 
     this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
     if (skin === 'xmascat') {
-      this.body.setSize(this.sprite.displayWidth * 0.6, this.sprite.displayHeight * 0.6, true);
+      this.body.setSize(this.sprite.displayWidth * 0.8, this.sprite.displayHeight * 0.7, true);
     } else {
       this.body.setSize(40, 28, true);
     }

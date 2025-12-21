@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME_HEIGHT, GAME_WIDTH, LEVEL_ONE_TARGET } from '../config/gameConfig';
+import { GAME_HEIGHT, GAME_WIDTH, LEVEL_ONE_TARGET, getTextScale, toFont } from '../config/gameConfig';
 import { GameEvents } from '../constants/GameEvents';
 import { SceneKeys } from '../constants/SceneKeys';
 import { EventBus } from '../events/EventBus';
@@ -14,6 +14,13 @@ export class UIScene extends Phaser.Scene {
   private modalPanel!: Phaser.GameObjects.Rectangle;
   private modalMessage!: Phaser.GameObjects.Text;
   private modalButton!: Phaser.GameObjects.Text;
+  private readonly fontSizes = {
+    hud: 20,
+    banner: 16,
+    levelComplete: 28,
+    modalMessage: 20,
+    modalButton: 16,
+  };
 
   constructor() {
     super(SceneKeys.UI);
@@ -21,15 +28,13 @@ export class UIScene extends Phaser.Scene {
 
   create(): void {
     this.scoreText = this.add.text(32, 24, `Gifts: 0/${LEVEL_ONE_TARGET}`, {
-      fontSize: '16px',
       color: '#ffe066',
-      fontFamily: 'Press Start 2P, monospace',
+      font: toFont(this.fontSizes.hud, getTextScale(this.scale.width, this.scale.height)),
     });
 
     this.timerText = this.add.text(GAME_WIDTH - 32, 24, 'Time: 0s', {
-      fontSize: '16px',
       color: '#ffffff',
-      fontFamily: 'Press Start 2P, monospace',
+      font: toFont(this.fontSizes.hud, getTextScale(this.scale.width, this.scale.height)),
     });
     this.timerText.setOrigin(1, 0);
 
@@ -58,21 +63,19 @@ export class UIScene extends Phaser.Scene {
     this.banner.setStrokeStyle(2, 0xffe066, 0.7);
 
     this.bannerCopy = this.add.text(this.banner.x, this.banner.y, `Collect ${LEVEL_ONE_TARGET} gifts to finish Level 1.`, {
-      fontSize: '12px',
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 480 },
-      fontFamily: 'Press Start 2P, monospace',
+      font: toFont(this.fontSizes.banner, getTextScale(this.scale.width, this.scale.height)),
     });
     this.bannerCopy.setOrigin(0.5);
   }
 
   private createLevelCompleteText(): void {
     this.levelCompleteText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Level 1 complete!', {
-      fontSize: '20px',
       color: '#ffffff',
       align: 'center',
-      fontFamily: 'Press Start 2P, monospace',
+      font: toFont(this.fontSizes.levelComplete, getTextScale(this.scale.width, this.scale.height)),
     });
     this.levelCompleteText.setOrigin(0.5);
     this.levelCompleteText.setVisible(false);
@@ -83,20 +86,18 @@ export class UIScene extends Phaser.Scene {
     this.modalPanel.setStrokeStyle(3, 0xffe066, 0.8);
 
     this.modalMessage = this.add.text(0, -36, 'Поздравляем, уровень завершен!', {
-      fontSize: '16px',
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 440 },
-      fontFamily: 'Press Start 2P, monospace',
+      font: toFont(this.fontSizes.modalMessage, getTextScale(this.scale.width, this.scale.height)),
     });
     this.modalMessage.setOrigin(0.5);
 
     this.modalButton = this.add.text(0, 48, 'Перейти на следующий', {
-      fontSize: '12px',
       color: '#0d0f1d',
       backgroundColor: '#ffe066',
       padding: { x: 16, y: 10 },
-      fontFamily: 'Press Start 2P, monospace',
+      font: toFont(this.fontSizes.modalButton, getTextScale(this.scale.width, this.scale.height)),
     });
     this.modalButton.setOrigin(0.5);
     this.modalButton.setInteractive({ useHandCursor: true })
@@ -118,6 +119,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private layout(width: number, height: number): void {
+    this.updateTypography(getTextScale(width, height));
     this.scoreText.setPosition(32, 24);
     this.timerText.setPosition(width - 32, 24);
 
@@ -134,6 +136,15 @@ export class UIScene extends Phaser.Scene {
     this.modalPanel.setSize(modalWidth, modalHeight);
     this.modalMessage.setWordWrapWidth(modalWidth - 80);
     this.levelCompleteModal.setPosition(width / 2, height / 2);
+  }
+
+  private updateTypography(scale: number): void {
+    this.scoreText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
+    this.timerText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
+    this.bannerCopy.setStyle({ font: toFont(this.fontSizes.banner, scale) });
+    this.levelCompleteText.setStyle({ font: toFont(this.fontSizes.levelComplete, scale) });
+    this.modalMessage.setStyle({ font: toFont(this.fontSizes.modalMessage, scale) });
+    this.modalButton.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
   }
 
   private updateScore(payload: { current: number; target: number }): void {
