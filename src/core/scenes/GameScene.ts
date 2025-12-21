@@ -69,7 +69,9 @@ export class GameScene extends Phaser.Scene {
     );
     this.collectibles = new CollectibleField(this, bounds);
     this.collectibles.spawn(this.giftsTarget);
-    this.collectibles.bindToTarget(this.player.getCollider(), () => {
+    this.collectibles.bindToTarget(
+      this.player.getCollider() as Phaser.Types.Physics.Arcade.GameObjectWithBody,
+      () => {
       const newScore = this.state.addScore(1);
       EventBus.emit(GameEvents.SCORE_UPDATED, { current: newScore, target: this.giftsTarget });
       if (!this.levelCompleted && newScore >= this.giftsTarget) {
@@ -141,9 +143,7 @@ export class GameScene extends Phaser.Scene {
       speed: { min: 10, max: 40 },
       scale: { start: 0.6, end: 0 },
       blendMode: 'ADD',
-      emitZone: new Phaser.GameObjects.Particles.Zones.RandomZone(
-        new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height)
-      ),
+      emitZone: this.createRandomZone(width, height),
     });
 
     this.backdropFrame = this.add.rectangle(
@@ -287,7 +287,7 @@ export class GameScene extends Phaser.Scene {
     gift.setVelocity(-this.levelTwoGiftSpeed, 0);
 
     if (gift.body) {
-      gift.body.setAllowGravity(false);
+      (gift.body as Phaser.Physics.Arcade.Body).allowGravity = false;
     }
   }
 
@@ -357,6 +357,17 @@ export class GameScene extends Phaser.Scene {
     graphics.destroy();
   }
 
+  private createRandomZone(width: number, height: number): Phaser.GameObjects.Particles.Zones.RandomZone {
+    return new Phaser.GameObjects.Particles.Zones.RandomZone({
+      getRandomPoint: (point?: Phaser.Types.Math.Vector2Like) => {
+        const target = point ?? { x: 0, y: 0 };
+        target.x = Phaser.Math.Between(-width / 2, width / 2);
+        target.y = Phaser.Math.Between(-height / 2, height / 2);
+        return target;
+      },
+    });
+  }
+
   private createRainbowTrail(): void {
     this.rainbowIsSnow = this.playerSkin === 'cat-hero';
     if (this.rainbowIsSnow) {
@@ -399,7 +410,7 @@ export class GameScene extends Phaser.Scene {
               onEmit: (particle) => {
                 const p = particle as Phaser.GameObjects.Particles.Particle & { snowScale?: number };
                 if (p.snowScale === undefined) {
-                  p.snowScale = Phaser.Math.FloatBetween(0.6, 1.2);
+                  p.snowScale = Phaser.Math.FloatBetween(0.4, 1.6);
                 }
                 return p.snowScale;
               },
@@ -415,7 +426,7 @@ export class GameScene extends Phaser.Scene {
               onEmit: (particle) => {
                 const p = particle as Phaser.GameObjects.Particles.Particle & { snowScale?: number };
                 if (p.snowScale === undefined) {
-                  p.snowScale = Phaser.Math.FloatBetween(0.6, 1.2);
+                  p.snowScale = Phaser.Math.FloatBetween(0.4, 1.6);
                 }
                 return p.snowScale;
               },
@@ -590,9 +601,7 @@ export class GameScene extends Phaser.Scene {
     this.backdropZone.setSize(width, height);
     this.backdropEmitter.setPosition(this.backdropZone.x, this.backdropZone.y);
     this.backdropEmitter.setEmitZone(
-      new Phaser.GameObjects.Particles.Zones.RandomZone(
-        new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height)
-      )
+      this.createRandomZone(width, height)
     );
 
     this.backdropFrame.setPosition(width / 2, height / 2);

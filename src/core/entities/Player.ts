@@ -52,7 +52,7 @@ export class Player {
     this.updateAnimation(direction);
   }
 
-  getCollider(): Phaser.GameObjects.GameObject {
+  getCollider(): Phaser.Physics.Arcade.Sprite | Phaser.Physics.Arcade.Image {
     return this.sprite;
   }
 
