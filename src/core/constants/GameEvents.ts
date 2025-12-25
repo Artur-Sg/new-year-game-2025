@@ -2,6 +2,7 @@ export const GameEvents = {
   READY: 'game-ready',
   START: 'game-start',
   SCORE_UPDATED: 'score-updated',
+  LIVES_UPDATED: 'lives-updated',
   TIMER_UPDATED: 'timer-updated',
   LEVEL_COMPLETED: 'level-completed',
   LEVEL_NEXT: 'level-next',

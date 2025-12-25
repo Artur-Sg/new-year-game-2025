@@ -5,6 +5,7 @@ import { EventBus } from '../events/EventBus';
 import { GameEvents } from '../constants/GameEvents';
 import { PlayerSkin } from '../config/playerSkins';
 import { getActiveSkin, setActiveSkin } from '../state/playerSkinStore';
+import { getActiveLevelId, getUnlockedLevelId, setActiveLevelId } from '../state/levelStore';
 
 export class MainMenuScene extends Phaser.Scene {
   private titleText!: Phaser.GameObjects.Text;
@@ -12,7 +13,9 @@ export class MainMenuScene extends Phaser.Scene {
   private startButton!: Phaser.GameObjects.Text;
   private howToButton!: Phaser.GameObjects.Text;
   private skinLabel!: Phaser.GameObjects.Text;
+  private levelLabel!: Phaser.GameObjects.Text;
   private isStarting = false;
+  private selectedLevelId = 1;
   private readonly fontSizes = {
     title: 36,
     subtitle: 16,
@@ -21,12 +24,20 @@ export class MainMenuScene extends Phaser.Scene {
     skinOption: 14,
     loading: 16,
     howTo: 18,
+    levelLabel: 16,
+    levelOption: 16,
   };
   private skinOptions: Array<{
     container: Phaser.GameObjects.Container;
     frame: Phaser.GameObjects.Rectangle;
     label: Phaser.GameObjects.Text;
     skin: PlayerSkin;
+  }> = [];
+  private levelOptions: Array<{
+    container: Phaser.GameObjects.Container;
+    frame: Phaser.GameObjects.Rectangle;
+    label: Phaser.GameObjects.Text;
+    level: number;
   }> = [];
   private resizeHandler?: (gameSize: Phaser.Structs.Size) => void;
 
@@ -35,6 +46,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.isStarting = false;
     this.titleText = this.add.text(0, 0, 'New Year Game 2025', {
       color: '#ffffff',
       font: toFont(this.fontSizes.title, getTextScale(this.scale.width, this.scale.height)),
@@ -58,6 +70,7 @@ export class MainMenuScene extends Phaser.Scene {
       .on('pointerup', () => this.showHowToPlay());
 
     this.createSkinPicker();
+    this.createLevelPicker();
 
     this.layout(this.scale.width, this.scale.height);
     this.resizeHandler = (gameSize: Phaser.Structs.Size) => {
@@ -77,6 +90,8 @@ export class MainMenuScene extends Phaser.Scene {
     }
     this.isStarting = true;
 
+    setActiveLevelId(this.selectedLevelId);
+
     this.startButton.disableInteractive();
     this.howToButton.disableInteractive();
     this.startButton.setAlpha(0.7);
@@ -91,8 +106,12 @@ export class MainMenuScene extends Phaser.Scene {
         import('./UIScene'),
       ]);
 
-      this.scene.add(SceneKeys.GAME, GameScene, false);
-      this.scene.add(SceneKeys.UI, UIScene, false);
+      if (!this.scene.get(SceneKeys.GAME)) {
+        this.scene.add(SceneKeys.GAME, GameScene, false);
+      }
+      if (!this.scene.get(SceneKeys.UI)) {
+        this.scene.add(SceneKeys.UI, UIScene, false);
+      }
     } finally {
       loading.finish();
     }
@@ -208,6 +227,47 @@ export class MainMenuScene extends Phaser.Scene {
     this.updateSkinSelection();
   }
 
+  private createLevelPicker(): void {
+    this.selectedLevelId = Math.min(getActiveLevelId(), getUnlockedLevelId());
+    this.levelLabel = this.add.text(0, 0, 'Choose level', {
+      color: '#ffffff',
+      font: toFont(this.fontSizes.levelLabel, getTextScale(this.scale.width, this.scale.height)),
+    });
+    this.levelLabel.setOrigin(0.5);
+
+    const maxUnlocked = getUnlockedLevelId();
+    const levels = [1, 2, 3, 4];
+
+    this.levelOptions = levels.map((level) => {
+      const frame = this.add.rectangle(0, 0, 56, 56, 0x0b0d1a, 0.9);
+      frame.setStrokeStyle(2, 0x334155, 0.8);
+
+      const text = this.add.text(0, 0, String(level), {
+        color: '#a5c6ff',
+        font: toFont(this.fontSizes.levelOption, getTextScale(this.scale.width, this.scale.height)),
+      });
+      text.setOrigin(0.5);
+
+      const container = this.add.container(0, 0, [frame, text]);
+
+      if (level <= maxUnlocked) {
+        frame.setInteractive({ useHandCursor: true })
+          .on('pointerover', () => frame.setStrokeStyle(2, 0xffd447, 0.9))
+          .on('pointerout', () => this.updateLevelSelection())
+          .on('pointerup', () => {
+            this.selectedLevelId = level;
+            this.updateLevelSelection();
+          });
+      } else {
+        container.setAlpha(0.35);
+      }
+
+      return { container, frame, label: text, level };
+    });
+
+    this.updateLevelSelection();
+  }
+
   private updateSkinSelection(): void {
     const current = getActiveSkin();
     this.skinOptions.forEach((option) => {
@@ -219,20 +279,39 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
+  private updateLevelSelection(): void {
+    this.levelOptions.forEach((option) => {
+      if (option.level === this.selectedLevelId) {
+        option.frame.setStrokeStyle(3, 0xffe066, 1);
+        option.label.setColor('#ffffff');
+      } else {
+        option.frame.setStrokeStyle(2, 0x334155, 0.8);
+        option.label.setColor('#a5c6ff');
+      }
+    });
+  }
+
   private layout(width: number, height: number): void {
     this.updateTypography(getTextScale(width, height));
     const centerX = width / 2;
-    this.titleText.setPosition(centerX, height * (130 / GAME_HEIGHT));
-    this.subtitleText.setPosition(centerX, height * (190 / GAME_HEIGHT));
-    this.skinLabel.setPosition(centerX, height * (240 / GAME_HEIGHT));
-    const optionsY = height * (300 / GAME_HEIGHT);
+    this.titleText.setPosition(centerX, height * (110 / GAME_HEIGHT));
+    this.subtitleText.setPosition(centerX, height * (170 / GAME_HEIGHT));
+    this.skinLabel.setPosition(centerX, height * (220 / GAME_HEIGHT));
+    const optionsY = height * (270 / GAME_HEIGHT);
     const spacing = Math.min(180, Math.max(140, width / 3));
     this.skinOptions.forEach((option, index) => {
       option.container.setPosition(centerX + (index === 0 ? -spacing : spacing), optionsY);
     });
 
-    this.startButton.setPosition(centerX, height * (380 / GAME_HEIGHT));
-    this.howToButton.setPosition(centerX, height * (440 / GAME_HEIGHT));
+    this.levelLabel.setPosition(centerX, height * (330 / GAME_HEIGHT));
+    const levelY = height * (380 / GAME_HEIGHT);
+    const levelSpacing = Math.min(80, Math.max(56, width / 6));
+    this.levelOptions.forEach((option, index) => {
+      option.container.setPosition(centerX + (index - 1.5) * levelSpacing, levelY);
+    });
+
+    this.startButton.setPosition(centerX, height * (440 / GAME_HEIGHT));
+    this.howToButton.setPosition(centerX, height * (500 / GAME_HEIGHT));
 
     const wrapWidth = Math.min(540, Math.max(280, width - 120));
     this.subtitleText.setWordWrapWidth(wrapWidth);
@@ -268,8 +347,12 @@ export class MainMenuScene extends Phaser.Scene {
     this.startButton.setStyle({ font: toFont(this.fontSizes.button, scale) });
     this.howToButton.setStyle({ font: toFont(this.fontSizes.button, scale) });
     this.skinLabel.setStyle({ font: toFont(this.fontSizes.skinLabel, scale) });
+    this.levelLabel.setStyle({ font: toFont(this.fontSizes.levelLabel, scale) });
     this.skinOptions.forEach((option) => {
       option.label.setStyle({ font: toFont(this.fontSizes.skinOption, scale) });
+    });
+    this.levelOptions.forEach((option) => {
+      option.label.setStyle({ font: toFont(this.fontSizes.levelOption, scale) });
     });
   }
 }

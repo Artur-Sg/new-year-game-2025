@@ -3,10 +3,12 @@ import { GAME_HEIGHT, GAME_WIDTH, LEVEL_ONE_TARGET, getTextScale, toFont } from 
 import { GameEvents } from '../constants/GameEvents';
 import { SceneKeys } from '../constants/SceneKeys';
 import { EventBus } from '../events/EventBus';
+import { setActiveLevelId } from '../state/levelStore';
 
 export class UIScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
+  private livesText!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Rectangle;
   private bannerCopy!: Phaser.GameObjects.Text;
   private levelCompleteText!: Phaser.GameObjects.Text;
@@ -14,6 +16,11 @@ export class UIScene extends Phaser.Scene {
   private modalPanel!: Phaser.GameObjects.Rectangle;
   private modalMessage!: Phaser.GameObjects.Text;
   private modalButton!: Phaser.GameObjects.Text;
+  private gameOverModal!: Phaser.GameObjects.Container;
+  private gameOverMessage!: Phaser.GameObjects.Text;
+  private gameOverButton!: Phaser.GameObjects.Text;
+  private gameOverRetryButton!: Phaser.GameObjects.Text;
+  private resizeHandler?: (gameSize: Phaser.Structs.Size) => void;
   private readonly fontSizes = {
     hud: 20,
     banner: 16,
@@ -38,23 +45,39 @@ export class UIScene extends Phaser.Scene {
     });
     this.timerText.setOrigin(1, 0);
 
+    this.livesText = this.add.text(GAME_WIDTH / 2, 24, 'Lives: 3', {
+      color: '#ffffff',
+      font: toFont(this.fontSizes.hud, getTextScale(this.scale.width, this.scale.height)),
+    });
+    this.livesText.setOrigin(0.5, 0);
+    this.livesText.setVisible(false);
+
     this.createCallToAction();
     this.createLevelCompleteText();
     this.createLevelCompleteModal();
+    this.createGameOverModal();
     this.layout(this.scale.width, this.scale.height);
 
-    this.scale.on('resize', (gameSize: Phaser.Structs.Size) => {
+    this.resizeHandler = (gameSize: Phaser.Structs.Size) => {
       this.layout(gameSize.width, gameSize.height);
-    });
+    };
+    this.scale.on('resize', this.resizeHandler);
 
     EventBus.on(GameEvents.SCORE_UPDATED, this.updateScore, this);
     EventBus.on(GameEvents.TIMER_UPDATED, this.updateTimer, this);
     EventBus.on(GameEvents.LEVEL_COMPLETED, this.showLevelComplete, this);
+    EventBus.on(GameEvents.LIVES_UPDATED, this.updateLives, this);
+    EventBus.on(GameEvents.GAME_OVER, this.showGameOver, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       EventBus.off(GameEvents.SCORE_UPDATED, this.updateScore, this);
       EventBus.off(GameEvents.TIMER_UPDATED, this.updateTimer, this);
       EventBus.off(GameEvents.LEVEL_COMPLETED, this.showLevelComplete, this);
+      EventBus.off(GameEvents.LIVES_UPDATED, this.updateLives, this);
+      EventBus.off(GameEvents.GAME_OVER, this.showGameOver, this);
+      if (this.resizeHandler) {
+        this.scale.off('resize', this.resizeHandler);
+      }
     });
   }
 
@@ -118,10 +141,66 @@ export class UIScene extends Phaser.Scene {
     this.levelCompleteModal.setVisible(false);
   }
 
+  private createGameOverModal(): void {
+    const panel = this.add.rectangle(0, 0, 520, 220, 0x0b0d1a, 0.95);
+    panel.setStrokeStyle(3, 0xff6b6b, 0.9);
+
+    this.gameOverMessage = this.add.text(0, -36, 'Снежки попали 3 раза.\nИгра окончена!', {
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 440 },
+      font: toFont(this.fontSizes.modalMessage, getTextScale(this.scale.width, this.scale.height)),
+    });
+    this.gameOverMessage.setOrigin(0.5);
+
+    this.gameOverRetryButton = this.add.text(0, 48, 'Попробовать снова', {
+      color: '#0d0f1d',
+      backgroundColor: '#ffe066',
+      padding: { x: 16, y: 10 },
+      font: toFont(this.fontSizes.modalButton, getTextScale(this.scale.width, this.scale.height)),
+    });
+    this.gameOverRetryButton.setOrigin(0.5);
+    this.gameOverRetryButton.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => this.gameOverRetryButton.setStyle({ backgroundColor: '#ffd447' }))
+      .on('pointerout', () => this.gameOverRetryButton.setStyle({ backgroundColor: '#ffe066' }))
+      .on('pointerup', () => {
+        setActiveLevelId(4);
+        this.scene.stop(SceneKeys.GAME);
+        this.scene.start(SceneKeys.GAME);
+        this.scene.restart();
+      });
+
+    this.gameOverButton = this.add.text(0, 112, 'В меню', {
+      color: '#0d0f1d',
+      backgroundColor: '#ffe066',
+      padding: { x: 16, y: 10 },
+      font: toFont(this.fontSizes.modalButton, getTextScale(this.scale.width, this.scale.height)),
+    });
+    this.gameOverButton.setOrigin(0.5);
+    this.gameOverButton.setInteractive({ useHandCursor: true })
+      .on('pointerover', () => this.gameOverButton.setStyle({ backgroundColor: '#ffd447' }))
+      .on('pointerout', () => this.gameOverButton.setStyle({ backgroundColor: '#ffe066' }))
+      .on('pointerup', () => {
+        this.scene.stop(SceneKeys.GAME);
+        this.scene.stop(SceneKeys.UI);
+        this.scene.start(SceneKeys.MAIN_MENU);
+      });
+
+    this.gameOverModal = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2, [
+      panel,
+      this.gameOverMessage,
+      this.gameOverRetryButton,
+      this.gameOverButton,
+    ]);
+    this.gameOverModal.setDepth(30);
+    this.gameOverModal.setVisible(false);
+  }
+
   private layout(width: number, height: number): void {
     this.updateTypography(getTextScale(width, height));
     this.scoreText.setPosition(32, 24);
     this.timerText.setPosition(width - 32, 24);
+    this.livesText.setPosition(width / 2, 24);
 
     const bannerWidth = Math.min(520, Math.max(320, width - 80));
     this.banner.setPosition(width / 2, height - 36);
@@ -136,15 +215,20 @@ export class UIScene extends Phaser.Scene {
     this.modalPanel.setSize(modalWidth, modalHeight);
     this.modalMessage.setWordWrapWidth(modalWidth - 80);
     this.levelCompleteModal.setPosition(width / 2, height / 2);
+    this.gameOverModal.setPosition(width / 2, height / 2);
   }
 
   private updateTypography(scale: number): void {
     this.scoreText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
     this.timerText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
+    this.livesText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
     this.bannerCopy.setStyle({ font: toFont(this.fontSizes.banner, scale) });
     this.levelCompleteText.setStyle({ font: toFont(this.fontSizes.levelComplete, scale) });
     this.modalMessage.setStyle({ font: toFont(this.fontSizes.modalMessage, scale) });
     this.modalButton.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
+    this.gameOverMessage.setStyle({ font: toFont(this.fontSizes.modalMessage, scale) });
+    this.gameOverButton.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
+    this.gameOverRetryButton.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
   }
 
   private updateScore(payload: { current: number; target: number }): void {
@@ -155,20 +239,37 @@ export class UIScene extends Phaser.Scene {
     this.timerText.setText(`Time: ${seconds}s`);
   }
 
+  private updateLives(payload: { lives: number }): void {
+    this.livesText.setText(`Lives: ${payload.lives}`);
+    this.livesText.setVisible(payload.lives > 0);
+  }
+
   private showLevelComplete(payload: { level: number }): void {
     this.levelCompleteText.setText(`Level ${payload.level} complete!`);
     this.levelCompleteText.setVisible(true);
-    if (payload.level === 1 || payload.level === 2) {
+    if (payload.level === 1 || payload.level === 2 || payload.level === 3) {
       this.setModalContent(payload.level);
       this.levelCompleteModal.setVisible(true);
     }
   }
 
+  private showGameOver(): void {
+    this.levelCompleteModal.setVisible(false);
+    this.levelCompleteText.setVisible(false);
+    this.gameOverModal.setVisible(true);
+  }
+
   private setModalContent(level: number): void {
-    const nextLabel = level === 1 ? 'Перейти на следующий' : 'Перейти на третий';
+    const nextLabel = level === 1
+      ? 'Перейти на следующий'
+      : level === 2
+        ? 'Перейти на третий'
+        : 'Перейти на четвертый';
     const message = level === 1
       ? 'Поздравляем, уровень завершен!'
-      : 'Поздравляем, уровень 2 завершен!';
+      : level === 2
+        ? 'Поздравляем, уровень 2 завершен!'
+        : 'Поздравляем, уровень 3 завершен!';
 
     this.modalMessage.setText(message);
     this.modalButton.setText(nextLabel);

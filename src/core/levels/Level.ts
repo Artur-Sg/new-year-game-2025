@@ -10,6 +10,8 @@ export type LevelContext = {
   player: Phaser.Types.Physics.Arcade.GameObjectWithBody;
   target: number;
   addScore: (amount: number) => number;
+  loseLife: () => number;
+  getLives: () => number;
 };
 
 export interface Level {

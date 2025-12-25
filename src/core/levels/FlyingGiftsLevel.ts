@@ -5,6 +5,12 @@ type FlyingGiftsConfig = {
   id: number;
   spawnDelay: number;
   giftSpeed: number;
+  wind?: {
+    yMin: number;
+    yMax: number;
+    xJitter: number;
+    changeInterval: number;
+  };
 };
 
 export class FlyingGiftsLevel implements Level {
@@ -48,6 +54,7 @@ export class FlyingGiftsLevel implements Level {
   }
 
   update(): void {
+    this.applyWind();
     this.cullGifts();
   }
 
@@ -79,6 +86,59 @@ export class FlyingGiftsLevel implements Level {
     if (gift.body) {
       (gift.body as Phaser.Physics.Arcade.Body).allowGravity = false;
     }
+
+    if (this.config.wind) {
+      this.applyWindToGift(gift, this.context.scene.time.now);
+    }
+  }
+
+  private applyWind(): void {
+    if (!this.gifts || !this.config.wind) {
+      return;
+    }
+
+    const now = this.context.scene.time.now;
+    const bounds = this.context.scene.physics.world.bounds;
+
+    this.gifts.getChildren().forEach((child) => {
+      const gift = child as Phaser.Physics.Arcade.Image;
+      this.applyWindToGift(gift, now);
+
+      if (!gift.body) {
+        return;
+      }
+
+      const body = gift.body as Phaser.Physics.Arcade.Body;
+      const minY = bounds.top + 20;
+      const maxY = bounds.bottom - 20;
+      if (gift.y < minY) {
+        gift.y = minY;
+        body.velocity.y = Math.abs(body.velocity.y);
+      } else if (gift.y > maxY) {
+        gift.y = maxY;
+        body.velocity.y = -Math.abs(body.velocity.y);
+      }
+    });
+  }
+
+  private applyWindToGift(gift: Phaser.Physics.Arcade.Image, now: number): void {
+    const wind = this.config.wind;
+    if (!wind || !gift.body) {
+      return;
+    }
+
+    const nextChange = gift.getData('windNextChange') as number | undefined;
+    if (nextChange !== undefined && now < nextChange) {
+      return;
+    }
+
+    const body = gift.body as Phaser.Physics.Arcade.Body;
+    const yVelocity = Phaser.Math.Between(wind.yMin, wind.yMax);
+    const xVelocity = -(this.config.giftSpeed + Phaser.Math.Between(-wind.xJitter, wind.xJitter));
+    body.setVelocity(xVelocity, yVelocity);
+
+    const jitter = Phaser.Math.Between(-80, 80);
+    gift.setData('windNextChange', now + wind.changeInterval + jitter);
   }
 
   private cullGifts(): void {

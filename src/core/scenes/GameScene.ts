@@ -12,11 +12,12 @@ import { Level } from '../levels/Level';
 import { Level1 } from '../levels/Level1';
 import { Level2 } from '../levels/Level2';
 import { Level3 } from '../levels/Level3';
+import { Level4 } from '../levels/Level4';
 import { InputSystem } from '../systems/InputSystem';
 import { GameState } from '../state/GameState';
 import { BackdropEffect } from '../effects/BackdropEffect';
 import { TrailEffect } from '../effects/TrailEffect';
-import { getActiveLevelId, setActiveLevelId } from '../state/levelStore';
+import { getActiveLevelId, setActiveLevelId, unlockLevel } from '../state/levelStore';
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -69,9 +70,10 @@ export class GameScene extends Phaser.Scene {
     this.scale.on('resize', this.resizeHandler);
 
     EventBus.on(GameEvents.LEVEL_NEXT, this.handleNextLevel, this);
+    EventBus.on(GameEvents.GAME_OVER, this.handleGameOver, this);
     this.debugKeyHandler = (event: KeyboardEvent) => {
       const modifier = event.ctrlKey || event.metaKey;
-      if (!modifier || !event.shiftKey) {
+      if (!modifier) {
         return;
       }
 
@@ -80,11 +82,17 @@ export class GameScene extends Phaser.Scene {
       const isKeyK = code === 'KeyK' || key === 'k' || key === 'K' || key === 'л' || key === 'Л';
       const isKey1 = code === 'Digit1' || code === 'Numpad1' || key === '1';
       const isKey2 = code === 'Digit2' || code === 'Numpad2' || key === '2';
+      const isKey3 = code === 'Digit3' || code === 'Numpad3' || key === '3';
+      const isKey4 = code === 'Digit4' || code === 'Numpad4' || key === '4';
 
       if (isKey1) {
         this.startLevel(1);
       } else if (isKey2) {
         this.startLevel(2);
+      } else if (isKey3) {
+        this.startLevel(3);
+      } else if (isKey4) {
+        this.startLevel(4);
       } else if (isKeyK) {
         const nextSkin = getActiveSkin() === 'cat-hero' ? 'xmascat' : 'cat-hero';
         setActiveSkin(nextSkin);
@@ -96,6 +104,7 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown', this.debugKeyHandler);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       EventBus.off(GameEvents.LEVEL_NEXT, this.handleNextLevel, this);
+      EventBus.off(GameEvents.GAME_OVER, this.handleGameOver, this);
       if (this.resizeHandler) {
         this.scale.off('resize', this.resizeHandler);
       }
@@ -130,6 +139,8 @@ export class GameScene extends Phaser.Scene {
     this.level = id;
     this.levelCompleted = false;
     this.state.start();
+    this.state.setLives(id === 4 ? 3 : 0);
+    EventBus.emit(GameEvents.LIVES_UPDATED, { lives: this.state.getLives() });
     this.lastSecond = 0;
     EventBus.emit(GameEvents.TIMER_UPDATED, 0);
     this.player.resetPosition();
@@ -150,6 +161,8 @@ export class GameScene extends Phaser.Scene {
       player: this.player.getCollider() as Phaser.Types.Physics.Arcade.GameObjectWithBody,
       target: this.giftsTarget,
       addScore: (amount: number) => this.state.addScore(amount),
+      loseLife: () => this.state.loseLife(),
+      getLives: () => this.state.getLives(),
     };
 
     const hooks = {
@@ -158,6 +171,10 @@ export class GameScene extends Phaser.Scene {
       },
       onComplete: () => {
         this.levelCompleted = true;
+        const nextLevel = this.level + 1;
+        if (nextLevel <= 4) {
+          unlockLevel(nextLevel);
+        }
         EventBus.emit(GameEvents.LEVEL_COMPLETED, { level: this.level });
       },
     };
@@ -172,7 +189,11 @@ export class GameScene extends Phaser.Scene {
       return new Level2(context, hooks);
     }
 
-    return new Level3(context, hooks);
+    if (id === 3) {
+      return new Level3(context, hooks);
+    }
+
+    return new Level4(context, hooks);
   }
 
   private ensureGiftTexture(): void {
@@ -218,5 +239,12 @@ export class GameScene extends Phaser.Scene {
     this.currentLevel = undefined;
     this.trailEffect?.destroy();
     this.backdropEffect?.destroy();
+  }
+
+  private handleGameOver(): void {
+    this.currentLevel?.destroy();
+    this.currentLevel = undefined;
+    this.physics.pause();
+    this.scene.pause();
   }
 }
