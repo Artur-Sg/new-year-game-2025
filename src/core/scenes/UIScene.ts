@@ -3,12 +3,13 @@ import { GAME_HEIGHT, GAME_WIDTH, LEVEL_ONE_TARGET, getTextScale, toFont } from 
 import { GameEvents } from '../constants/GameEvents';
 import { SceneKeys } from '../constants/SceneKeys';
 import { EventBus } from '../events/EventBus';
-import { setActiveLevelId } from '../state/levelStore';
+import { getActiveLevelId, setActiveLevelId } from '../state/levelStore';
 
 export class UIScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
   private livesText!: Phaser.GameObjects.Text;
+  private starsText!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Rectangle;
   private bannerCopy!: Phaser.GameObjects.Text;
   private levelCompleteText!: Phaser.GameObjects.Text;
@@ -34,23 +35,30 @@ export class UIScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.scoreText = this.add.text(32, 24, `Gifts: 0/${LEVEL_ONE_TARGET}`, {
+    this.scoreText = this.add.text(32, 24, `Подарки: 0/${LEVEL_ONE_TARGET}`, {
       color: '#ffe066',
       font: toFont(this.fontSizes.hud, getTextScale(this.scale.width, this.scale.height)),
     });
 
-    this.timerText = this.add.text(GAME_WIDTH - 32, 24, 'Time: 0s', {
+    this.timerText = this.add.text(GAME_WIDTH - 32, 24, 'Время: 0с', {
       color: '#ffffff',
       font: toFont(this.fontSizes.hud, getTextScale(this.scale.width, this.scale.height)),
     });
     this.timerText.setOrigin(1, 0);
 
-    this.livesText = this.add.text(GAME_WIDTH / 2, 24, 'Lives: 3', {
+    this.livesText = this.add.text(GAME_WIDTH / 2, 24, 'Жизни: 3', {
       color: '#ffffff',
       font: toFont(this.fontSizes.hud, getTextScale(this.scale.width, this.scale.height)),
     });
     this.livesText.setOrigin(0.5, 0);
     this.livesText.setVisible(false);
+
+    this.starsText = this.add.text(GAME_WIDTH / 2, 54, 'Звёзды: 0', {
+      color: '#ffe066',
+      font: toFont(this.fontSizes.hud, getTextScale(this.scale.width, this.scale.height)),
+    });
+    this.starsText.setOrigin(0.5, 0);
+    this.starsText.setVisible(false);
 
     this.createCallToAction();
     this.createLevelCompleteText();
@@ -66,14 +74,18 @@ export class UIScene extends Phaser.Scene {
     EventBus.on(GameEvents.SCORE_UPDATED, this.updateScore, this);
     EventBus.on(GameEvents.TIMER_UPDATED, this.updateTimer, this);
     EventBus.on(GameEvents.LEVEL_COMPLETED, this.showLevelComplete, this);
+    EventBus.on(GameEvents.LEVEL_STARTED, this.updateLevelBanner, this);
     EventBus.on(GameEvents.LIVES_UPDATED, this.updateLives, this);
+    EventBus.on(GameEvents.STARS_UPDATED, this.updateStars, this);
     EventBus.on(GameEvents.GAME_OVER, this.showGameOver, this);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       EventBus.off(GameEvents.SCORE_UPDATED, this.updateScore, this);
       EventBus.off(GameEvents.TIMER_UPDATED, this.updateTimer, this);
       EventBus.off(GameEvents.LEVEL_COMPLETED, this.showLevelComplete, this);
+      EventBus.off(GameEvents.LEVEL_STARTED, this.updateLevelBanner, this);
       EventBus.off(GameEvents.LIVES_UPDATED, this.updateLives, this);
+      EventBus.off(GameEvents.STARS_UPDATED, this.updateStars, this);
       EventBus.off(GameEvents.GAME_OVER, this.showGameOver, this);
       if (this.resizeHandler) {
         this.scale.off('resize', this.resizeHandler);
@@ -85,17 +97,18 @@ export class UIScene extends Phaser.Scene {
     this.banner = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 36, 520, 64, 0x0f162a, 0.85);
     this.banner.setStrokeStyle(2, 0xffe066, 0.7);
 
-    this.bannerCopy = this.add.text(this.banner.x, this.banner.y, `Collect ${LEVEL_ONE_TARGET} gifts to finish Level 1.`, {
+    this.bannerCopy = this.add.text(this.banner.x, this.banner.y, '', {
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 480 },
       font: toFont(this.fontSizes.banner, getTextScale(this.scale.width, this.scale.height)),
     });
     this.bannerCopy.setOrigin(0.5);
+    this.updateLevelBanner({ level: getActiveLevelId() });
   }
 
   private createLevelCompleteText(): void {
-    this.levelCompleteText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Level 1 complete!', {
+    this.levelCompleteText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'Уровень 1 пройден!', {
       color: '#ffffff',
       align: 'center',
       font: toFont(this.fontSizes.levelComplete, getTextScale(this.scale.width, this.scale.height)),
@@ -108,7 +121,7 @@ export class UIScene extends Phaser.Scene {
     this.modalPanel = this.add.rectangle(0, 0, 520, 220, 0x0b0d1a, 0.95);
     this.modalPanel.setStrokeStyle(3, 0xffe066, 0.8);
 
-    this.modalMessage = this.add.text(0, -36, 'Поздравляем, уровень завершен!', {
+    this.modalMessage = this.add.text(0, -36, 'Поздравляем, уровень пройден!', {
       color: '#ffffff',
       align: 'center',
       wordWrap: { width: 440 },
@@ -164,7 +177,7 @@ export class UIScene extends Phaser.Scene {
       .on('pointerover', () => this.gameOverRetryButton.setStyle({ backgroundColor: '#ffd447' }))
       .on('pointerout', () => this.gameOverRetryButton.setStyle({ backgroundColor: '#ffe066' }))
       .on('pointerup', () => {
-        setActiveLevelId(4);
+        setActiveLevelId(getActiveLevelId());
         this.scene.stop(SceneKeys.GAME);
         this.scene.start(SceneKeys.GAME);
         this.scene.restart();
@@ -201,6 +214,7 @@ export class UIScene extends Phaser.Scene {
     this.scoreText.setPosition(32, 24);
     this.timerText.setPosition(width - 32, 24);
     this.livesText.setPosition(width / 2, 24);
+    this.starsText.setPosition(width / 2, 54);
 
     const bannerWidth = Math.min(520, Math.max(320, width - 80));
     this.banner.setPosition(width / 2, height - 36);
@@ -222,6 +236,7 @@ export class UIScene extends Phaser.Scene {
     this.scoreText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
     this.timerText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
     this.livesText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
+    this.starsText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
     this.bannerCopy.setStyle({ font: toFont(this.fontSizes.banner, scale) });
     this.levelCompleteText.setStyle({ font: toFont(this.fontSizes.levelComplete, scale) });
     this.modalMessage.setStyle({ font: toFont(this.fontSizes.modalMessage, scale) });
@@ -232,22 +247,51 @@ export class UIScene extends Phaser.Scene {
   }
 
   private updateScore(payload: { current: number; target: number }): void {
-    this.scoreText.setText(`Gifts: ${payload.current}/${payload.target}`);
+    this.scoreText.setText(`Подарки: ${payload.current}/${payload.target}`);
   }
 
   private updateTimer(seconds: number): void {
-    this.timerText.setText(`Time: ${seconds}s`);
+    this.timerText.setText(`Время: ${seconds}с`);
   }
 
   private updateLives(payload: { lives: number }): void {
-    this.livesText.setText(`Lives: ${payload.lives}`);
+    this.livesText.setText(`Жизни: ${payload.lives}`);
     this.livesText.setVisible(payload.lives > 0);
   }
 
+  private updateStars(payload: { stars: number }): void {
+    this.starsText.setText(`Звёзды: ${payload.stars}`);
+    this.starsText.setVisible(payload.stars > 0);
+  }
+
+  private updateLevelBanner(payload: { level: number }): void {
+    const label = this.getBannerCopy(payload.level);
+    this.bannerCopy.setText(label);
+  }
+
+  private getBannerCopy(level: number): string {
+    if (level === 1) {
+      return `Собери ${LEVEL_ONE_TARGET} подарков, чтобы пройти уровень 1.`;
+    }
+    if (level === 2) {
+      return `Подарки уносит ветром. Собирай скорее!`;
+    }
+    if (level === 3) {
+      return `Начинается буря! Подарки улетают во все стороны!`;
+    }
+    if (level === 4) {
+      return `Осторожно, снежки! Уклоняйся от них и продолжай собирать подарки`;
+    }
+    if (level === 5) {
+      return 'Буря заморозила подарки! Собирай звёздочки и размораживай ими подарки стреляя (клавиша ПРОБЕЛ)!';
+    }
+    return 'Осторожно, приближается лавина! Размораживай подарки и уклоняйся от снежков';
+  }
+
   private showLevelComplete(payload: { level: number }): void {
-    this.levelCompleteText.setText(`Level ${payload.level} complete!`);
+    this.levelCompleteText.setText(`Уровень ${payload.level} пройден!`);
     this.levelCompleteText.setVisible(true);
-    if (payload.level === 1 || payload.level === 2 || payload.level === 3) {
+    if (payload.level >= 1 && payload.level <= 5) {
       this.setModalContent(payload.level);
       this.levelCompleteModal.setVisible(true);
     }
@@ -264,12 +308,20 @@ export class UIScene extends Phaser.Scene {
       ? 'Перейти на следующий'
       : level === 2
         ? 'Перейти на третий'
-        : 'Перейти на четвертый';
+        : level === 3
+          ? 'Перейти на четвертый'
+          : level === 4
+            ? 'Перейти на пятый'
+            : 'Перейти на шестой';
     const message = level === 1
-      ? 'Поздравляем, уровень завершен!'
+      ? 'Поздравляем, уровень пройден!'
       : level === 2
-        ? 'Поздравляем, уровень 2 завершен!'
-        : 'Поздравляем, уровень 3 завершен!';
+        ? 'Поздравляем, уровень 2 пройден!'
+        : level === 3
+          ? 'Поздравляем, уровень 3 пройден!'
+          : level === 4
+            ? 'Поздравляем, уровень 4 пройден!'
+            : 'Поздравляем, уровень 5 пройден!';
 
     this.modalMessage.setText(message);
     this.modalButton.setText(nextLabel);

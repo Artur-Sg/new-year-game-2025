@@ -13,6 +13,8 @@ import { Level1 } from '../levels/Level1';
 import { Level2 } from '../levels/Level2';
 import { Level3 } from '../levels/Level3';
 import { Level4 } from '../levels/Level4';
+import { Level5 } from '../levels/Level5';
+import { Level6 } from '../levels/Level6';
 import { InputSystem } from '../systems/InputSystem';
 import { GameState } from '../state/GameState';
 import { BackdropEffect } from '../effects/BackdropEffect';
@@ -84,6 +86,8 @@ export class GameScene extends Phaser.Scene {
       const isKey2 = code === 'Digit2' || code === 'Numpad2' || key === '2';
       const isKey3 = code === 'Digit3' || code === 'Numpad3' || key === '3';
       const isKey4 = code === 'Digit4' || code === 'Numpad4' || key === '4';
+      const isKey5 = code === 'Digit5' || code === 'Numpad5' || key === '5';
+      const isKey6 = code === 'Digit6' || code === 'Numpad6' || key === '6';
 
       if (isKey1) {
         this.startLevel(1);
@@ -93,6 +97,10 @@ export class GameScene extends Phaser.Scene {
         this.startLevel(3);
       } else if (isKey4) {
         this.startLevel(4);
+      } else if (isKey5) {
+        this.startLevel(5);
+      } else if (isKey6) {
+        this.startLevel(6);
       } else if (isKeyK) {
         const nextSkin = getActiveSkin() === 'cat-hero' ? 'xmascat' : 'cat-hero';
         setActiveSkin(nextSkin);
@@ -111,6 +119,10 @@ export class GameScene extends Phaser.Scene {
       if (this.debugKeyHandler) {
         this.input.keyboard?.off('keydown', this.debugKeyHandler);
       }
+      this.currentLevel?.destroy();
+      this.currentLevel = undefined;
+      this.trailEffect?.destroy();
+      this.backdropEffect?.destroy();
     });
   }
 
@@ -139,8 +151,10 @@ export class GameScene extends Phaser.Scene {
     this.level = id;
     this.levelCompleted = false;
     this.state.start();
-    this.state.setLives(id === 4 ? 3 : 0);
+    this.state.setLives(id === 4 || id === 6 ? 3 : 0);
     EventBus.emit(GameEvents.LIVES_UPDATED, { lives: this.state.getLives() });
+    EventBus.emit(GameEvents.STARS_UPDATED, { stars: 0 });
+    EventBus.emit(GameEvents.LEVEL_STARTED, { level: id });
     this.lastSecond = 0;
     EventBus.emit(GameEvents.TIMER_UPDATED, 0);
     this.player.resetPosition();
@@ -172,7 +186,7 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         this.levelCompleted = true;
         const nextLevel = this.level + 1;
-        if (nextLevel <= 4) {
+        if (nextLevel <= 6) {
           unlockLevel(nextLevel);
         }
         EventBus.emit(GameEvents.LEVEL_COMPLETED, { level: this.level });
@@ -193,7 +207,15 @@ export class GameScene extends Phaser.Scene {
       return new Level3(context, hooks);
     }
 
-    return new Level4(context, hooks);
+    if (id === 4) {
+      return new Level4(context, hooks);
+    }
+
+    if (id === 5) {
+      return new Level5(context, hooks);
+    }
+
+    return new Level6(context, hooks);
   }
 
   private ensureGiftTexture(): void {

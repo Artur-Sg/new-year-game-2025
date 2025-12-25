@@ -21,7 +21,7 @@ export class PreloadScene extends Phaser.Scene {
     this.progressBox = this.add.rectangle(width / 2, height / 2, 320, 32, 0x1f2433, 0.8);
     this.progressBar = this.add.rectangle(width / 2 - 150, height / 2, 0, 16, 0xffe066, 1);
     const scale = getTextScale(width, height);
-    this.progressText = this.add.text(width / 2, height / 2 + 40, 'Loading... 0%', {
+    this.progressText = this.add.text(width / 2, height / 2 + 40, 'Загрузка... 0%', {
       font: toFont(16, scale),
       color: '#a5c6ff',
     });
@@ -92,7 +92,7 @@ export class PreloadScene extends Phaser.Scene {
       this.progressBar.width = 300 * (value / 100);
     }
     if (this.progressText) {
-      this.progressText.setText(`Loading... ${value}%`);
+      this.progressText.setText(`Загрузка... ${value}%`);
     }
   }
 

@@ -47,13 +47,13 @@ export class MainMenuScene extends Phaser.Scene {
 
   create(): void {
     this.isStarting = false;
-    this.titleText = this.add.text(0, 0, 'New Year Game 2025', {
+    this.titleText = this.add.text(0, 0, 'Новогодняя игра 2025', {
       color: '#ffffff',
       font: toFont(this.fontSizes.title, getTextScale(this.scale.width, this.scale.height)),
     });
     this.titleText.setOrigin(0.5);
 
-    this.subtitleText = this.add.text(0, 0, "Fly and collect Santa's lost gifts!", {
+    this.subtitleText = this.add.text(0, 0, 'Летай и собирай потерянные подарки Санты!', {
       color: '#a5c6ff',
       align: 'center',
       wordWrap: { width: 540 },
@@ -61,12 +61,12 @@ export class MainMenuScene extends Phaser.Scene {
     });
     this.subtitleText.setOrigin(0.5);
 
-    this.startButton = this.createButton(0, 0, 'Start');
+    this.startButton = this.createButton(0, 0, 'Старт');
     this.startButton.on('pointerup', () => {
       void this.startGame();
     });
 
-    this.howToButton = this.createButton(0, 0, 'How to play')
+    this.howToButton = this.createButton(0, 0, 'Как играть')
       .on('pointerup', () => this.showHowToPlay());
 
     this.createSkinPicker();
@@ -130,7 +130,7 @@ export class MainMenuScene extends Phaser.Scene {
     const backdrop = this.add.rectangle(centerX, centerY, width, height, 0x0b0d1a, 0.9);
     const box = this.add.rectangle(centerX, centerY, 320, 32, 0x1f2433, 0.9);
     const bar = this.add.rectangle(centerX - 150, centerY, 0, 16, 0xffe066, 1);
-    const text = this.add.text(centerX, centerY + 40, 'Loading... 0%', {
+    const text = this.add.text(centerX, centerY + 40, 'Загрузка... 0%', {
       color: '#a5c6ff',
       font: toFont(this.fontSizes.loading, getTextScale(width, height)),
     });
@@ -138,7 +138,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const setProgress = (value: number) => {
       bar.width = 300 * (value / 100);
-      text.setText(`Loading... ${value}%`);
+      text.setText(`Загрузка... ${value}%`);
     };
 
     let progressValue = 0;
@@ -188,7 +188,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   private createSkinPicker(): void {
-    this.skinLabel = this.add.text(0, 0, 'Choose your cat', {
+    this.skinLabel = this.add.text(0, 0, 'Выбери кота', {
       color: '#ffffff',
       font: toFont(this.fontSizes.skinLabel, getTextScale(this.scale.width, this.scale.height)),
     });
@@ -229,14 +229,14 @@ export class MainMenuScene extends Phaser.Scene {
 
   private createLevelPicker(): void {
     this.selectedLevelId = Math.min(getActiveLevelId(), getUnlockedLevelId());
-    this.levelLabel = this.add.text(0, 0, 'Choose level', {
+    this.levelLabel = this.add.text(0, 0, 'Выбери уровень', {
       color: '#ffffff',
       font: toFont(this.fontSizes.levelLabel, getTextScale(this.scale.width, this.scale.height)),
     });
     this.levelLabel.setOrigin(0.5);
 
     const maxUnlocked = getUnlockedLevelId();
-    const levels = [1, 2, 3, 4];
+    const levels = [1, 2, 3, 4, 5, 6];
 
     this.levelOptions = levels.map((level) => {
       const frame = this.add.rectangle(0, 0, 56, 56, 0x0b0d1a, 0.9);
@@ -305,9 +305,10 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.levelLabel.setPosition(centerX, height * (330 / GAME_HEIGHT));
     const levelY = height * (380 / GAME_HEIGHT);
-    const levelSpacing = Math.min(80, Math.max(56, width / 6));
+    const levelSpacing = Math.min(72, Math.max(48, width / 7));
+    const offset = (this.levelOptions.length - 1) / 2;
     this.levelOptions.forEach((option, index) => {
-      option.container.setPosition(centerX + (index - 1.5) * levelSpacing, levelY);
+      option.container.setPosition(centerX + (index - offset) * levelSpacing, levelY);
     });
 
     this.startButton.setPosition(centerX, height * (440 / GAME_HEIGHT));
@@ -326,7 +327,7 @@ export class MainMenuScene extends Phaser.Scene {
     modal.setStrokeStyle(3, 0xffe066, 0.8);
 
     const scale = getTextScale(width, height);
-    const text = this.add.text(modal.x, modal.y, 'Fly with arrows or WASD\nCollect 10 gifts\nFinish the level!', {
+    const text = this.add.text(modal.x, modal.y, 'Летай на стрелках или WASD\nСобери 10 подарков\nПройди уровень!', {
       color: '#ffffff',
       align: 'center',
       lineSpacing: 10,
