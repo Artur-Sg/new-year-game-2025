@@ -7,10 +7,11 @@ export type LevelHooks = {
 
 export type LevelContext = {
   scene: Phaser.Scene;
-  player: Phaser.Types.Physics.Arcade.GameObjectWithBody;
+  player: Phaser.Types.Physics.Arcade.GameObjectWithBody & Phaser.GameObjects.Components.Transform;
   target: number;
   addScore: (amount: number) => number;
   loseLife: () => number;
+  addLife: (amount: number, maxLives: number) => number;
   getLives: () => number;
 };
 

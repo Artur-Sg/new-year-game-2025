@@ -74,11 +74,10 @@ export class FlyingGiftsLevel implements Level {
     const bounds = this.context.scene.physics.world.bounds;
     const x = bounds.right + 24;
     const y = Phaser.Math.Between(bounds.top + 40, bounds.bottom - 40);
-    const color = Phaser.Utils.Array.GetRandom([0xff5b6c, 0x5bd1ff, 0x7cff75, 0xffd86c]);
-    const gift = this.gifts.create(x, y, 'gift') as Phaser.Physics.Arcade.Image;
-    gift.setTint(color);
-    gift.setScale(1);
-    gift.setDepth(2);
+    const giftKey = this.pickGiftKey();
+    const gift = this.gifts.create(x, y, giftKey) as Phaser.Physics.Arcade.Image;
+    gift.setScale(0.13);
+    gift.setDepth(11);
     gift.setActive(true);
     gift.setVisible(true);
     gift.setVelocity(-this.config.giftSpeed, 0);
@@ -90,6 +89,10 @@ export class FlyingGiftsLevel implements Level {
     if (this.config.wind) {
       this.applyWindToGift(gift, this.context.scene.time.now);
     }
+  }
+
+  private pickGiftKey(): string {
+    return Phaser.Utils.Array.GetRandom(['gift-1', 'gift-2', 'gift-3', 'gift-4', 'gift-5', 'gift-6', 'gift-7']);
   }
 
   private applyWind(): void {

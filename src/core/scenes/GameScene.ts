@@ -15,10 +15,12 @@ import { Level3 } from '../levels/Level3';
 import { Level4 } from '../levels/Level4';
 import { Level5 } from '../levels/Level5';
 import { Level6 } from '../levels/Level6';
+import { Level7 } from '../levels/Level7';
 import { InputSystem } from '../systems/InputSystem';
 import { GameState } from '../state/GameState';
 import { BackdropEffect } from '../effects/BackdropEffect';
 import { TrailEffect } from '../effects/TrailEffect';
+import { ForegroundEffect } from '../effects/ForegroundEffect';
 import { getActiveLevelId, setActiveLevelId, unlockLevel } from '../state/levelStore';
 
 export class GameScene extends Phaser.Scene {
@@ -29,6 +31,7 @@ export class GameScene extends Phaser.Scene {
   private state = new GameState();
   private lastSecond = 0;
   private backdropEffect!: BackdropEffect;
+  private foregroundEffect!: ForegroundEffect;
   private giftsTarget = LEVEL_ONE_TARGET;
   private levelCompleted = false;
   private level = 1;
@@ -36,6 +39,9 @@ export class GameScene extends Phaser.Scene {
   private playerSkin: PlayerSkin = getActiveSkin();
   private debugKeyHandler?: (event: KeyboardEvent) => void;
   private resizeHandler?: (gameSize: Phaser.Structs.Size) => void;
+  private levelFilter?: Phaser.GameObjects.Rectangle;
+  private readonly levelFilterAlpha = 0.28;
+  private filterPhase = 0;
 
   constructor() {
     super(SceneKeys.GAME);
@@ -47,6 +53,11 @@ export class GameScene extends Phaser.Scene {
     this.playerSkin = getActiveSkin();
     this.backdropEffect = new BackdropEffect(this);
     this.backdropEffect.create();
+    this.levelFilter = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x1e2c5b, this.levelFilterAlpha);
+    this.levelFilter.setOrigin(0, 0);
+    this.levelFilter.setDepth(1);
+    this.foregroundEffect = new ForegroundEffect(this);
+    this.foregroundEffect.create();
     registerCatHeroAnimations(this.anims);
     registerXmascatAnimations(this.anims);
 
@@ -123,15 +134,20 @@ export class GameScene extends Phaser.Scene {
       this.currentLevel = undefined;
       this.trailEffect?.destroy();
       this.backdropEffect?.destroy();
+      this.levelFilter?.destroy();
+      this.foregroundEffect?.destroy();
     });
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
     const direction = this.inputSystem.getDirectionVector();
     this.player.setForcedAnimation(null);
     this.player.update(direction);
+    this.backdropEffect.update(delta, direction);
+    this.foregroundEffect.update(delta);
     this.trailEffect.update(direction);
     this.currentLevel?.update();
+    this.updateDynamicFilter(delta);
 
     const elapsed = this.state.updateTime();
     const seconds = Math.floor(elapsed / 1000);
@@ -151,10 +167,11 @@ export class GameScene extends Phaser.Scene {
     this.level = id;
     this.levelCompleted = false;
     this.state.start();
-    this.state.setLives(id === 4 || id === 6 ? 3 : 0);
+    this.state.setLives(id === 4 || id === 6 || id === 7 ? 3 : 0);
     EventBus.emit(GameEvents.LIVES_UPDATED, { lives: this.state.getLives() });
     EventBus.emit(GameEvents.STARS_UPDATED, { stars: 0 });
     EventBus.emit(GameEvents.LEVEL_STARTED, { level: id });
+    this.updateLevelFilter(id);
     this.lastSecond = 0;
     EventBus.emit(GameEvents.TIMER_UPDATED, 0);
     this.player.resetPosition();
@@ -172,10 +189,11 @@ export class GameScene extends Phaser.Scene {
   private createLevel(id: number): Level {
     const context = {
       scene: this,
-      player: this.player.getCollider() as Phaser.Types.Physics.Arcade.GameObjectWithBody,
+      player: this.player.getCollider() as Phaser.Types.Physics.Arcade.GameObjectWithBody & Phaser.GameObjects.Components.Transform,
       target: this.giftsTarget,
       addScore: (amount: number) => this.state.addScore(amount),
       loseLife: () => this.state.loseLife(),
+      addLife: (amount: number, maxLives: number) => this.state.addLife(amount, maxLives),
       getLives: () => this.state.getLives(),
     };
 
@@ -186,7 +204,7 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         this.levelCompleted = true;
         const nextLevel = this.level + 1;
-        if (nextLevel <= 6) {
+        if (nextLevel <= 7) {
           unlockLevel(nextLevel);
         }
         EventBus.emit(GameEvents.LEVEL_COMPLETED, { level: this.level });
@@ -215,11 +233,16 @@ export class GameScene extends Phaser.Scene {
       return new Level5(context, hooks);
     }
 
-    return new Level6(context, hooks);
+    if (id === 6) {
+      return new Level6(context, hooks);
+    }
+
+    return new Level7(context, hooks);
   }
 
   private ensureGiftTexture(): void {
-    if (this.textures.exists('gift')) {
+    // Keep legacy fallback for development when gift images are missing.
+    if (this.textures.exists('gift-1')) {
       return;
     }
 
@@ -228,7 +251,13 @@ export class GameScene extends Phaser.Scene {
     graphics.fillRoundedRect(0, 0, 16, 16, 3);
     graphics.lineStyle(2, 0xffffff, 1);
     graphics.strokeRoundedRect(1, 1, 14, 14, 3);
-    graphics.generateTexture('gift', 16, 16);
+    graphics.generateTexture('gift-1', 16, 16);
+    graphics.generateTexture('gift-2', 16, 16);
+    graphics.generateTexture('gift-3', 16, 16);
+    graphics.generateTexture('gift-4', 16, 16);
+    graphics.generateTexture('gift-5', 16, 16);
+    graphics.generateTexture('gift-6', 16, 16);
+    graphics.generateTexture('gift-7', 16, 16);
     graphics.destroy();
   }
 
@@ -252,6 +281,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.backdropEffect.resize(width, height);
+    this.foregroundEffect.resize(width, height);
+    this.levelFilter?.setSize(width, height);
 
     this.currentLevel?.resize(width, height);
   }
@@ -261,6 +292,8 @@ export class GameScene extends Phaser.Scene {
     this.currentLevel = undefined;
     this.trailEffect?.destroy();
     this.backdropEffect?.destroy();
+    this.levelFilter?.destroy();
+    this.foregroundEffect?.destroy();
   }
 
   private handleGameOver(): void {
@@ -268,5 +301,32 @@ export class GameScene extends Phaser.Scene {
     this.currentLevel = undefined;
     this.physics.pause();
     this.scene.pause();
+  }
+
+  private updateLevelFilter(levelId: number): void {
+    if (!this.levelFilter) {
+      return;
+    }
+
+    const colors = [
+      0x7fd7ff,
+      0x6bb7ff,
+      0x38c27c,
+      0x2f6bff,
+      0x7b4bff,
+      0x7b00ff,
+    ];
+    const color = colors[(levelId - 1) % colors.length];
+    this.levelFilter.setFillStyle(color, this.levelFilterAlpha);
+  }
+
+  private updateDynamicFilter(delta: number): void {
+    if (!this.levelFilter || this.currentLevelId !== 7) {
+      return;
+    }
+
+    this.filterPhase = (this.filterPhase + delta * 0.00006) % 1;
+    const color = Phaser.Display.Color.HSVToRGB(this.filterPhase, 0.35, 0.85);
+    this.levelFilter.setFillStyle(color.color, this.levelFilterAlpha);
   }
 }

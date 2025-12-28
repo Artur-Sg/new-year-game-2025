@@ -19,6 +19,9 @@ export class Level5 implements Level {
   private shootKey?: Phaser.Input.Keyboard.Key;
   private completed = false;
   private starAmmo = 0;
+  private pickStarSound?: Phaser.Sound.BaseSound;
+  private starShootSound?: Phaser.Sound.BaseSound;
+  private iceBreakSound?: Phaser.Sound.BaseSound;
 
   private readonly config = {
     giftSpawnDelay: 640,
@@ -39,6 +42,9 @@ export class Level5 implements Level {
     this.ensureGiftTexture();
     this.ensureIceTexture();
     this.ensureStarTexture();
+    this.pickStarSound = this.context.scene.sound.add('sfx-pick-star', { volume: 0.7 });
+    this.starShootSound = this.context.scene.sound.add('sfx-star-shoot', { volume: 0.7 });
+    this.iceBreakSound = this.context.scene.sound.add('sfx-ice-break', { volume: 0.7 });
 
     this.gifts = this.context.scene.physics.add.group({
       allowGravity: false,
@@ -71,6 +77,7 @@ export class Level5 implements Level {
 
     this.context.scene.physics.add.overlap(this.context.player, this.stars, (_player, star) => {
       star.destroy();
+      this.context.scene.sound.play('sfx-pick-star', { volume: 0.7 });
       this.starAmmo = Math.min(5, this.starAmmo + 1);
       EventBus.emit(GameEvents.STARS_UPDATED, { stars: this.starAmmo });
     });
@@ -78,6 +85,7 @@ export class Level5 implements Level {
     this.context.scene.physics.add.overlap(this.starShots, this.gifts, (shot, gift) => {
       const frozenGift = gift as FrozenGift;
       if (frozenGift.getData('frozen')) {
+        this.context.scene.sound.play('sfx-ice-break', { volume: 0.7, seek: 0, duration: 0.3 });
         this.unfreezeGift(frozenGift);
       }
       shot.destroy();
@@ -137,11 +145,10 @@ export class Level5 implements Level {
     const bounds = this.context.scene.physics.world.bounds;
     const x = bounds.right + 24;
     const y = Phaser.Math.Between(bounds.top + 40, bounds.bottom - 40);
-    const color = Phaser.Utils.Array.GetRandom([0xff5b6c, 0x5bd1ff, 0x7cff75, 0xffd86c]);
-    const gift = this.gifts.create(x, y, 'gift') as FrozenGift;
-    gift.setTint(color);
-    gift.setScale(1);
-    gift.setDepth(2);
+    const giftKey = Phaser.Utils.Array.GetRandom(['gift-1', 'gift-2', 'gift-3', 'gift-4', 'gift-5', 'gift-6', 'gift-7']);
+    const gift = this.gifts.create(x, y, giftKey) as FrozenGift;
+    gift.setScale(0.13);
+    gift.setDepth(11);
     gift.setActive(true);
     gift.setVisible(true);
     gift.setVelocity(-this.config.giftSpeed, 0);
@@ -150,9 +157,10 @@ export class Level5 implements Level {
     const centerX = gift.x + (0.5 - gift.originX) * gift.displayWidth;
     const centerY = gift.y + (0.5 - gift.originY) * gift.displayHeight;
     const ice = this.context.scene.add.image(centerX, centerY, 'ice');
-    ice.setDepth(3);
-    ice.setAlpha(0.65);
+    ice.setDepth(11.5);
+    ice.setAlpha(0.45);
     ice.setOrigin(0.5, 0.5);
+    ice.setScale(2);
     this.iceOverlays?.add(ice);
     gift.setData('ice', ice);
 
@@ -170,7 +178,7 @@ export class Level5 implements Level {
     const x = bounds.right + 24;
     const y = Phaser.Math.Between(bounds.top + 40, bounds.bottom - 40);
     const star = this.stars.create(x, y, 'star') as Phaser.Physics.Arcade.Image;
-    star.setDepth(2);
+    star.setDepth(11);
     star.setActive(true);
     star.setVisible(true);
     star.setVelocity(-this.config.starSpeed, 0);
@@ -189,9 +197,10 @@ export class Level5 implements Level {
     const x = player.x;
     const y = player.y;
     const shot = this.starShots.create(x, y, 'star') as Phaser.Physics.Arcade.Image;
-    shot.setDepth(4);
+    shot.setDepth(11);
     shot.setActive(true);
     shot.setVisible(true);
+    this.context.scene.sound.play('sfx-star-shoot', { volume: 0.7 });
 
     if (shot.body) {
       (shot.body as Phaser.Physics.Arcade.Body).setVelocity(this.config.starShotSpeed, 0);
@@ -300,6 +309,12 @@ export class Level5 implements Level {
 
     this.starShots?.clear(true, true);
     this.starShots = undefined;
+    this.pickStarSound?.destroy();
+    this.pickStarSound = undefined;
+    this.starShootSound?.destroy();
+    this.starShootSound = undefined;
+    this.iceBreakSound?.destroy();
+    this.iceBreakSound = undefined;
 
     if (this.shootKey) {
       this.context.scene.input.keyboard?.removeKey(this.shootKey);

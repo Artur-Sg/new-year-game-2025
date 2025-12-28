@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { getTextScale, toFont } from '../config/gameConfig';
+import { forestSlices } from '../assets/forestSlices';
 import { SceneKeys } from '../constants/SceneKeys';
 
 export class PreloadScene extends Phaser.Scene {
@@ -61,6 +62,39 @@ export class PreloadScene extends Phaser.Scene {
     this.load.spritesheet('xmascat', xmasCatUrl, {
       frameWidth: 258,
       frameHeight: 196,
+    });
+    const snowballUrl = new URL('../../assets/snowball.png', import.meta.url).toString();
+    this.load.image('snowball', snowballUrl);
+
+    const giftBase = '../../assets/gifts/';
+    this.load.image('gift-1', new URL(`${giftBase}gift.png`, import.meta.url).toString());
+    this.load.image('gift-2', new URL(`${giftBase}gift2.png`, import.meta.url).toString());
+    this.load.image('gift-3', new URL(`${giftBase}gift3.png`, import.meta.url).toString());
+    this.load.image('gift-4', new URL(`${giftBase}gift4.png`, import.meta.url).toString());
+    this.load.image('gift-5', new URL(`${giftBase}gift5.png`, import.meta.url).toString());
+    this.load.image('gift-6', new URL(`${giftBase}gift6.png`, import.meta.url).toString());
+    this.load.image('gift-7', new URL(`${giftBase}gift7.png`, import.meta.url).toString());
+
+    this.load.audio('sfx-pick', new URL('../../assets/audio/pick.mp3', import.meta.url).toString());
+    this.load.audio('sfx-success', new URL('../../assets/audio/success.mp3', import.meta.url).toString());
+    this.load.audio('sfx-no-luck', new URL('../../assets/audio/no-luck.mp3', import.meta.url).toString());
+    this.load.audio('sfx-snowball-hit', new URL('../../assets/audio/snowball-hit.mp3', import.meta.url).toString());
+    this.load.audio('sfx-sad-meow-1', new URL('../../assets/audio/sad-meow-1.mp3', import.meta.url).toString());
+    this.load.audio('sfx-sad-meow-2', new URL('../../assets/audio/sad-meow-2.mp3', import.meta.url).toString());
+    this.load.audio('sfx-pick-star', new URL('../../assets/audio/pick-star.mp3', import.meta.url).toString());
+    this.load.audio('sfx-star-shoot', new URL('../../assets/audio/star-shoot.mp3', import.meta.url).toString());
+    this.load.audio('sfx-ice-break', new URL('../../assets/audio/ice-break.mp3', import.meta.url).toString());
+
+    const forestBase = '../../assets/forest/';
+    this.load.image('forest-bg-1', new URL(`${forestBase}Background 1.png`, import.meta.url).toString());
+    this.load.image('forest-bg-1b', new URL(`${forestBase}Background 1.2.png`, import.meta.url).toString());
+    this.load.image('forest-bg-2', new URL(`${forestBase}Background 2.png`, import.meta.url).toString());
+    this.load.image('forest-bg-3', new URL(`${forestBase}Background 3.png`, import.meta.url).toString());
+    this.load.image('forest-bg-4', new URL(`${forestBase}Background 4.png`, import.meta.url).toString());
+    this.load.image('forest-bg-5', new URL(`${forestBase}Background 5.png`, import.meta.url).toString());
+    const forestSliceBase = '../../assets/forest/slices/';
+    forestSlices.forEach((slice) => {
+      this.load.image(slice.key, new URL(`${forestSliceBase}${slice.filename}`, import.meta.url).toString());
     });
   }
 

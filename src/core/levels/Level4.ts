@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameEvents } from '../constants/GameEvents';
 import { EventBus } from '../events/EventBus';
+import { getActiveSkin } from '../state/playerSkinStore';
 import { Level, LevelContext, LevelHooks } from './Level';
 
 export class Level4 implements Level {
@@ -11,6 +12,9 @@ export class Level4 implements Level {
   private spawnSnowballTimer?: Phaser.Time.TimerEvent;
   private completed = false;
   private lastHitAt = 0;
+  private hitSound?: Phaser.Sound.BaseSound;
+  private sadMeow1?: Phaser.Sound.BaseSound;
+  private sadMeow2?: Phaser.Sound.BaseSound;
 
   private readonly config = {
     giftSpawnDelay: 620,
@@ -29,6 +33,9 @@ export class Level4 implements Level {
     this.lastHitAt = 0;
     this.cleanupGifts();
     this.cleanupSnowballs();
+    this.hitSound = this.context.scene.sound.add('sfx-snowball-hit', { volume: 0.7 });
+    this.sadMeow1 = this.context.scene.sound.add('sfx-sad-meow-1', { volume: 0.7 });
+    this.sadMeow2 = this.context.scene.sound.add('sfx-sad-meow-2', { volume: 0.7 });
 
     this.ensureSnowballTexture();
     this.ensureGiftTexture();
@@ -95,11 +102,10 @@ export class Level4 implements Level {
     const bounds = this.context.scene.physics.world.bounds;
     const x = bounds.right + 24;
     const y = Phaser.Math.Between(bounds.top + 40, bounds.bottom - 40);
-    const color = Phaser.Utils.Array.GetRandom([0xff5b6c, 0x5bd1ff, 0x7cff75, 0xffd86c]);
-    const gift = this.gifts.create(x, y, 'gift') as Phaser.Physics.Arcade.Image;
-    gift.setTint(color);
-    gift.setScale(1);
-    gift.setDepth(2);
+    const giftKey = Phaser.Utils.Array.GetRandom(['gift-1', 'gift-2', 'gift-3', 'gift-4', 'gift-5', 'gift-6', 'gift-7']);
+    const gift = this.gifts.create(x, y, giftKey) as Phaser.Physics.Arcade.Image;
+    gift.setScale(0.13);
+    gift.setDepth(11);
     gift.setActive(true);
     gift.setVisible(true);
     gift.setVelocity(-this.config.giftSpeed, 0);
@@ -118,7 +124,8 @@ export class Level4 implements Level {
     const x = bounds.right + 24;
     const y = Phaser.Math.Between(bounds.top + 40, bounds.bottom - 40);
     const snowball = this.snowballs.create(x, y, 'snowball') as Phaser.Physics.Arcade.Image;
-    snowball.setDepth(2);
+    snowball.setDepth(11);
+    snowball.setScale(0.1);
     snowball.setActive(true);
     snowball.setVisible(true);
 
@@ -139,6 +146,18 @@ export class Level4 implements Level {
     }
     this.lastHitAt = now;
     snowball.destroy();
+    const skin = getActiveSkin();
+    this.context.scene.sound.play('sfx-snowball-hit', { volume: 0.7 });
+    if (skin === 'xmascat') {
+      this.context.scene.sound.play('sfx-sad-meow-2', { volume: 0.7 });
+    } else {
+      const meow = this.context.scene.sound.add('sfx-sad-meow-1', { volume: 0.7 });
+      meow.play();
+      this.context.scene.time.delayedCall(500, () => {
+        meow.stop();
+        meow.destroy();
+      });
+    }
 
     const livesLeft = this.context.loseLife();
     EventBus.emit(GameEvents.LIVES_UPDATED, { lives: livesLeft });
@@ -198,6 +217,12 @@ export class Level4 implements Level {
     this.spawnSnowballTimer = undefined;
     this.snowballs?.clear(true, true);
     this.snowballs = undefined;
+    this.hitSound?.destroy();
+    this.hitSound = undefined;
+    this.sadMeow1?.destroy();
+    this.sadMeow1 = undefined;
+    this.sadMeow2?.destroy();
+    this.sadMeow2 = undefined;
   }
 
   private ensureGiftTexture(): void {

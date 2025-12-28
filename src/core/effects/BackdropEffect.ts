@@ -1,74 +1,79 @@
 import Phaser from 'phaser';
 
 export class BackdropEffect {
-  private zone!: Phaser.GameObjects.Zone;
-  private emitter!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private frame!: Phaser.GameObjects.Rectangle;
+  private layers: Array<{
+    sprites: [Phaser.GameObjects.Image, Phaser.GameObjects.Image];
+    speed: number;
+  }> = [];
+  private baseSpeed = 55;
 
   constructor(private scene: Phaser.Scene) {}
 
   create(): void {
     const width = this.scene.scale.width;
     const height = this.scene.scale.height;
-    this.ensureSparkTexture();
+    const layerConfigs = [
+      { key: 'forest-bg-5', speed: 0.12, depth: -12 },
+      { key: 'forest-bg-4', speed: 0.22, depth: -11 },
+      { key: 'forest-bg-3', speed: 0.36, depth: -10 },
+      { key: 'forest-bg-2', speed: 0.5, depth: -9 },
+    ];
 
-    this.zone = this.scene.add.zone(width / 2, height / 2, width, height);
-    this.emitter = this.scene.add.particles(this.zone.x, this.zone.y, 'spark', {
-      quantity: 2,
-      lifespan: { min: 1200, max: 2400 },
-      speed: { min: 10, max: 40 },
-      scale: { start: 0.6, end: 0 },
-      blendMode: 'ADD',
-      emitZone: this.createRandomZone(width, height),
+    this.layers = layerConfigs.map((config) => {
+      const spriteA = this.scene.add.image(0, height / 2, config.key);
+      const spriteB = this.scene.add.image(0, height / 2, config.key);
+      spriteA.setDepth(config.depth);
+      spriteB.setDepth(config.depth);
+      this.fitLayerToScreen([spriteA, spriteB], width, height);
+      return { sprites: [spriteA, spriteB], speed: config.speed };
     });
-
-    this.frame = this.scene.add.rectangle(
-      width / 2,
-      height / 2,
-      width - 24,
-      height - 24,
-      0x0f162a,
-      0.6
-    );
-    this.frame.setStrokeStyle(4, 0xffe066, 0.8);
   }
 
   resize(width: number, height: number): void {
-    this.zone.setPosition(width / 2, height / 2);
-    this.zone.setSize(width, height);
-    this.emitter.setPosition(this.zone.x, this.zone.y);
-    this.emitter.setEmitZone(this.createRandomZone(width, height));
-
-    this.frame.setPosition(width / 2, height / 2);
-    this.frame.setSize(width - 24, height - 24);
+    this.layers.forEach(({ sprites }) => {
+      this.fitLayerToScreen(sprites, width, height);
+    });
   }
 
   destroy(): void {
-    this.zone?.destroy();
-    this.emitter?.destroy();
-    this.frame?.destroy();
+    this.layers.forEach(({ sprites }) => sprites.forEach((sprite) => sprite.destroy()));
+    this.layers = [];
   }
 
-  private ensureSparkTexture(): void {
-    if (this.scene.textures.exists('spark')) {
-      return;
-    }
+  update(delta: number, _direction: Phaser.Math.Vector2): void {
+    const deltaSeconds = delta / 1000;
+    this.layers.forEach(({ sprites, speed }) => {
+      const shift = this.baseSpeed * speed * deltaSeconds;
+      const [spriteA, spriteB] = sprites;
+      spriteA.x -= shift;
+      spriteB.x -= shift;
 
-    const graphics = this.scene.add.graphics();
-    graphics.fillStyle(0xffffff, 1);
-    graphics.fillRect(0, 0, 2, 2);
-    graphics.generateTexture('spark', 2, 2);
-    graphics.destroy();
-  }
-
-  private createRandomZone(width: number, height: number): Phaser.GameObjects.Particles.Zones.RandomZone {
-    return new Phaser.GameObjects.Particles.Zones.RandomZone({
-      getRandomPoint: (point?: Phaser.Types.Math.Vector2Like) => {
-        const target = point ?? { x: 0, y: 0 };
-        target.x = Phaser.Math.Between(-width / 2, width / 2);
-        target.y = Phaser.Math.Between(-height / 2, height / 2);
-        return target;
-      },
+      if (spriteA.x + spriteA.displayWidth <= 0) {
+        spriteA.x = spriteB.x + spriteB.displayWidth;
+      }
+      if (spriteB.x + spriteB.displayWidth <= 0) {
+        spriteB.x = spriteA.x + spriteA.displayWidth;
+      }
     });
+  }
+
+  private fitLayerToScreen(
+    sprites: [Phaser.GameObjects.Image, Phaser.GameObjects.Image],
+    width: number,
+    height: number
+  ): void {
+    const textureKey = sprites[0].texture.key;
+    const source = this.scene.textures.get(textureKey).getSourceImage() as { width: number; height: number };
+    const scaleX = width / source.width;
+    const scaleY = height / source.height;
+    const scale = Math.max(scaleX, scaleY);
+    sprites.forEach((sprite) => {
+      sprite.setScale(scale);
+      sprite.setOrigin(0, 0.5);
+      sprite.setY(height / 2);
+    });
+    const scaledWidth = source.width * scale;
+    sprites[0].setX(0);
+    sprites[1].setX(scaledWidth);
   }
 }

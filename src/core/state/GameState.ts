@@ -24,6 +24,11 @@ export class GameState {
     return this.lives;
   }
 
+  addLife(amount: number, maxLives: number): number {
+    this.lives = Math.min(maxLives, this.lives + amount);
+    return this.lives;
+  }
+
   getLives(): number {
     return this.lives;
   }

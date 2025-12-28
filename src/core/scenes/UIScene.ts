@@ -9,6 +9,7 @@ export class UIScene extends Phaser.Scene {
   private scoreText!: Phaser.GameObjects.Text;
   private timerText!: Phaser.GameObjects.Text;
   private livesText!: Phaser.GameObjects.Text;
+  private lifeHearts: Phaser.GameObjects.Text[] = [];
   private starsText!: Phaser.GameObjects.Text;
   private banner!: Phaser.GameObjects.Rectangle;
   private bannerCopy!: Phaser.GameObjects.Text;
@@ -22,6 +23,10 @@ export class UIScene extends Phaser.Scene {
   private gameOverButton!: Phaser.GameObjects.Text;
   private gameOverRetryButton!: Phaser.GameObjects.Text;
   private resizeHandler?: (gameSize: Phaser.Structs.Size) => void;
+  private pickSound?: Phaser.Sound.BaseSound;
+  private successSound?: Phaser.Sound.BaseSound;
+  private noLuckSound?: Phaser.Sound.BaseSound;
+  private lastScore = 0;
   private readonly fontSizes = {
     hud: 20,
     banner: 16,
@@ -53,6 +58,16 @@ export class UIScene extends Phaser.Scene {
     this.livesText.setOrigin(0.5, 0);
     this.livesText.setVisible(false);
 
+    this.lifeHearts = Array.from({ length: 3 }, (_, index) => {
+      const heart = this.add.text(GAME_WIDTH / 2 + index * 20, 24, '♥', {
+        color: '#ff4d6d',
+        font: toFont(this.fontSizes.hud, getTextScale(this.scale.width, this.scale.height)),
+      });
+      heart.setOrigin(0.5, 0);
+      heart.setVisible(false);
+      return heart;
+    });
+
     this.starsText = this.add.text(GAME_WIDTH / 2, 54, 'Звёзды: 0', {
       color: '#ffe066',
       font: toFont(this.fontSizes.hud, getTextScale(this.scale.width, this.scale.height)),
@@ -64,6 +79,7 @@ export class UIScene extends Phaser.Scene {
     this.createLevelCompleteText();
     this.createLevelCompleteModal();
     this.createGameOverModal();
+    this.setupAudio();
     this.layout(this.scale.width, this.scale.height);
 
     this.resizeHandler = (gameSize: Phaser.Structs.Size) => {
@@ -105,6 +121,12 @@ export class UIScene extends Phaser.Scene {
     });
     this.bannerCopy.setOrigin(0.5);
     this.updateLevelBanner({ level: getActiveLevelId() });
+  }
+
+  private setupAudio(): void {
+    this.pickSound = this.sound.add('sfx-pick', { volume: 0.6 });
+    this.successSound = this.sound.add('sfx-success', { volume: 0.8 });
+    this.noLuckSound = this.sound.add('sfx-no-luck', { volume: 0.8 });
   }
 
   private createLevelCompleteText(): void {
@@ -214,6 +236,9 @@ export class UIScene extends Phaser.Scene {
     this.scoreText.setPosition(32, 24);
     this.timerText.setPosition(width - 32, 24);
     this.livesText.setPosition(width / 2, 24);
+    this.lifeHearts.forEach((heart, index) => {
+      heart.setPosition(width / 2 + (index - 1) * 22, 24);
+    });
     this.starsText.setPosition(width / 2, 54);
 
     const bannerWidth = Math.min(520, Math.max(320, width - 80));
@@ -236,6 +261,7 @@ export class UIScene extends Phaser.Scene {
     this.scoreText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
     this.timerText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
     this.livesText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
+    this.lifeHearts.forEach((heart) => heart.setStyle({ font: toFont(this.fontSizes.hud, scale) }));
     this.starsText.setStyle({ font: toFont(this.fontSizes.hud, scale) });
     this.bannerCopy.setStyle({ font: toFont(this.fontSizes.banner, scale) });
     this.levelCompleteText.setStyle({ font: toFont(this.fontSizes.levelComplete, scale) });
@@ -248,6 +274,10 @@ export class UIScene extends Phaser.Scene {
 
   private updateScore(payload: { current: number; target: number }): void {
     this.scoreText.setText(`Подарки: ${payload.current}/${payload.target}`);
+    if (payload.current > this.lastScore) {
+      this.pickSound?.play({ seek: 0.3 });
+    }
+    this.lastScore = payload.current;
   }
 
   private updateTimer(seconds: number): void {
@@ -256,7 +286,13 @@ export class UIScene extends Phaser.Scene {
 
   private updateLives(payload: { lives: number }): void {
     this.livesText.setText(`Жизни: ${payload.lives}`);
-    this.livesText.setVisible(payload.lives > 0);
+    const showHearts = payload.lives > 0;
+    this.livesText.setVisible(false);
+    this.lifeHearts.forEach((heart, index) => {
+      const active = index < payload.lives;
+      heart.setVisible(showHearts);
+      heart.setColor(active ? '#ff4d6d' : '#1a1f2d');
+    });
   }
 
   private updateStars(payload: { stars: number }): void {
@@ -267,6 +303,7 @@ export class UIScene extends Phaser.Scene {
   private updateLevelBanner(payload: { level: number }): void {
     const label = this.getBannerCopy(payload.level);
     this.bannerCopy.setText(label);
+    this.lastScore = 0;
   }
 
   private getBannerCopy(level: number): string {
@@ -285,13 +322,20 @@ export class UIScene extends Phaser.Scene {
     if (level === 5) {
       return 'Буря заморозила подарки! Собирай звёздочки и размораживай ими подарки стреляя (клавиша ПРОБЕЛ)!';
     }
-    return 'Осторожно, приближается лавина! Размораживай подарки и уклоняйся от снежков';
+    if (level === 6) {
+      return 'Осторожно, приближается лавина! Размораживай подарки и уклоняйся от снежков';
+    }
+    if (level === 7) {
+      return 'Бонусный уровень: собирай подарки, звёзды и сердца как можно дольше!';
+    }
+    return 'Бонусный уровень: собирай подарки, звёзды и сердца как можно дольше!';
   }
 
   private showLevelComplete(payload: { level: number }): void {
     this.levelCompleteText.setText(`Уровень ${payload.level} пройден!`);
     this.levelCompleteText.setVisible(true);
-    if (payload.level >= 1 && payload.level <= 5) {
+    this.successSound?.play();
+    if (payload.level >= 1 && payload.level <= 6) {
       this.setModalContent(payload.level);
       this.levelCompleteModal.setVisible(true);
     }
@@ -301,6 +345,7 @@ export class UIScene extends Phaser.Scene {
     this.levelCompleteModal.setVisible(false);
     this.levelCompleteText.setVisible(false);
     this.gameOverModal.setVisible(true);
+    this.noLuckSound?.play();
   }
 
   private setModalContent(level: number): void {
@@ -312,7 +357,9 @@ export class UIScene extends Phaser.Scene {
           ? 'Перейти на четвертый'
           : level === 4
             ? 'Перейти на пятый'
-            : 'Перейти на шестой';
+            : level === 5
+              ? 'Перейти на шестой'
+              : 'Перейти на бонусный';
     const message = level === 1
       ? 'Поздравляем, уровень пройден!'
       : level === 2
@@ -321,7 +368,9 @@ export class UIScene extends Phaser.Scene {
           ? 'Поздравляем, уровень 3 пройден!'
           : level === 4
             ? 'Поздравляем, уровень 4 пройден!'
-            : 'Поздравляем, уровень 5 пройден!';
+            : level === 5
+              ? 'Поздравляем, уровень 5 пройден!'
+              : 'Поздравляем, уровень 6 пройден!';
 
     this.modalMessage.setText(message);
     this.modalButton.setText(nextLabel);

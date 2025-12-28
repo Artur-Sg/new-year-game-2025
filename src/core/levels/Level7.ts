@@ -3,57 +3,61 @@ import { GameEvents } from '../constants/GameEvents';
 import { EventBus } from '../events/EventBus';
 import { getActiveSkin } from '../state/playerSkinStore';
 import { Level, LevelContext, LevelHooks } from './Level';
+import { updateBonusRecord } from '../state/bonusRecordStore';
 
 type FrozenGift = Phaser.Physics.Arcade.Image & {
   getData(key: 'frozen'): boolean;
   getData(key: 'ice'): Phaser.GameObjects.Image | undefined;
 };
 
-export class Level6 implements Level {
-  readonly id = 6;
+export class Level7 implements Level {
+  readonly id = 7;
   private gifts?: Phaser.Physics.Arcade.Group;
   private stars?: Phaser.Physics.Arcade.Group;
   private starShots?: Phaser.Physics.Arcade.Group;
   private snowballs?: Phaser.Physics.Arcade.Group;
+  private hearts?: Phaser.Physics.Arcade.Group;
   private iceOverlays?: Phaser.GameObjects.Group;
   private spawnGiftTimer?: Phaser.Time.TimerEvent;
   private spawnStarTimer?: Phaser.Time.TimerEvent;
+  private spawnHeartTimer?: Phaser.Time.TimerEvent;
   private spawnSnowballTimer?: Phaser.Time.TimerEvent;
   private shootKey?: Phaser.Input.Keyboard.Key;
-  private completed = false;
   private lastHitAt = 0;
   private starAmmo = 0;
-  private hitSound?: Phaser.Sound.BaseSound;
-  private sadMeow1?: Phaser.Sound.BaseSound;
-  private sadMeow2?: Phaser.Sound.BaseSound;
+  private score = 0;
+  private startTime = 0;
+  private readonly maxLives = 3;
   private pickStarSound?: Phaser.Sound.BaseSound;
   private starShootSound?: Phaser.Sound.BaseSound;
   private iceBreakSound?: Phaser.Sound.BaseSound;
 
   private readonly config = {
-    giftSpawnDelay: 560,
-    giftSpeed: 240,
-    starSpawnDelay: 780,
-    starSpeed: 200,
-    starShotSpeed: 420,
-    snowballSpawnDelay: 460,
-    snowballBaseSpeed: 280,
+    giftSpawnDelay: 520,
+    giftSpeed: 250,
+    starSpawnDelay: 820,
+    starSpeed: 210,
+    starShotSpeed: 440,
+    heartSpawnDelay: 1640,
+    snowballSpawnDelay: 430,
+    snowballBaseSpeed: 300,
     wind: {
-      yMin: -220,
-      yMax: 220,
-      xJitter: 120,
-      changeInterval: 240,
+      yMin: -240,
+      yMax: 240,
+      xJitter: 140,
+      changeInterval: 220,
     },
-    angleJitter: 0.55,
-    hitCooldown: 380,
+    angleJitter: 0.6,
+    hitCooldown: 360,
   };
 
   constructor(private context: LevelContext, private hooks: LevelHooks) {}
 
   start(): void {
-    this.completed = false;
     this.lastHitAt = 0;
     this.starAmmo = 0;
+    this.score = 0;
+    this.startTime = this.context.scene.time.now;
     EventBus.emit(GameEvents.STARS_UPDATED, { stars: this.starAmmo });
 
     this.cleanupAll();
@@ -61,9 +65,7 @@ export class Level6 implements Level {
     this.ensureIceTexture();
     this.ensureStarTexture();
     this.ensureSnowballTexture();
-    this.hitSound = this.context.scene.sound.add('sfx-snowball-hit', { volume: 0.7 });
-    this.sadMeow1 = this.context.scene.sound.add('sfx-sad-meow-1', { volume: 0.7 });
-    this.sadMeow2 = this.context.scene.sound.add('sfx-sad-meow-2', { volume: 0.7 });
+    this.ensureHeartTexture();
     this.pickStarSound = this.context.scene.sound.add('sfx-pick-star', { volume: 0.7 });
     this.starShootSound = this.context.scene.sound.add('sfx-star-shoot', { volume: 0.7 });
     this.iceBreakSound = this.context.scene.sound.add('sfx-ice-break', { volume: 0.7 });
@@ -84,6 +86,10 @@ export class Level6 implements Level {
       allowGravity: false,
       immovable: true,
     });
+    this.hearts = this.context.scene.physics.add.group({
+      allowGravity: false,
+      immovable: true,
+    });
     this.iceOverlays = this.context.scene.add.group();
 
     this.context.scene.physics.add.overlap(this.context.player, this.gifts, (_player, gift) => {
@@ -92,13 +98,8 @@ export class Level6 implements Level {
         return;
       }
       this.destroyFrozenGift(gift as FrozenGift);
-      const score = this.context.addScore(1);
-      this.hooks.onScore(score);
-      if (!this.completed && score >= this.context.target) {
-        this.completed = true;
-        this.cleanupAll();
-        this.hooks.onComplete();
-      }
+      this.score = this.context.addScore(1);
+      this.hooks.onScore(this.score);
     });
 
     this.context.scene.physics.add.overlap(this.context.player, this.stars, (_player, star) => {
@@ -106,6 +107,13 @@ export class Level6 implements Level {
       this.context.scene.sound.play('sfx-pick-star', { volume: 0.7 });
       this.starAmmo = Math.min(5, this.starAmmo + 1);
       EventBus.emit(GameEvents.STARS_UPDATED, { stars: this.starAmmo });
+    });
+
+    this.context.scene.physics.add.overlap(this.context.player, this.hearts, (_player, heart) => {
+      heart.destroy();
+      this.context.scene.sound.play('sfx-pick-star', { volume: 0.7 });
+      const lives = this.context.addLife(1, this.maxLives);
+      EventBus.emit(GameEvents.LIVES_UPDATED, { lives });
     });
 
     this.context.scene.physics.add.overlap(this.context.player, this.snowballs, (_player, snowball) => {
@@ -122,7 +130,6 @@ export class Level6 implements Level {
     });
     this.context.scene.physics.add.overlap(this.starShots, this.snowballs, (shot, snowball) => {
       snowball.destroy();
-      this.context.scene.sound.play('sfx-ice-break', { volume: 0.7, seek: 0, duration: 0.3 });
       shot.destroy();
     });
 
@@ -140,6 +147,12 @@ export class Level6 implements Level {
       callback: this.spawnStar,
       callbackScope: this,
     });
+    this.spawnHeartTimer = this.context.scene.time.addEvent({
+      delay: this.config.heartSpawnDelay,
+      loop: true,
+      callback: this.spawnHeart,
+      callbackScope: this,
+    });
     this.spawnSnowballTimer = this.context.scene.time.addEvent({
       delay: this.config.snowballSpawnDelay,
       loop: true,
@@ -148,6 +161,7 @@ export class Level6 implements Level {
     });
     this.spawnGift();
     this.spawnStar();
+    this.spawnHeart();
     this.spawnSnowball();
   }
 
@@ -157,6 +171,7 @@ export class Level6 implements Level {
     this.applySnowballWind();
     this.cullGifts();
     this.cullStars();
+    this.cullHearts();
     this.cullStarShots();
     this.cullSnowballs();
   }
@@ -233,6 +248,25 @@ export class Level6 implements Level {
     }
   }
 
+  private spawnHeart(): void {
+    if (!this.hearts) {
+      return;
+    }
+
+    const bounds = this.context.scene.physics.world.bounds;
+    const x = bounds.right + 24;
+    const y = Phaser.Math.Between(bounds.top + 40, bounds.bottom - 40);
+    const heart = this.hearts.create(x, y, 'heart') as Phaser.Physics.Arcade.Image;
+    heart.setDepth(11);
+    heart.setActive(true);
+    heart.setVisible(true);
+    heart.setVelocity(-this.config.starSpeed, 0);
+
+    if (heart.body) {
+      (heart.body as Phaser.Physics.Arcade.Body).allowGravity = false;
+    }
+  }
+
   private spawnStarShot(): void {
     if (!this.starShots) {
       return;
@@ -302,6 +336,7 @@ export class Level6 implements Level {
     EventBus.emit(GameEvents.LIVES_UPDATED, { lives: livesLeft });
     if (livesLeft <= 0) {
       this.cleanupAll();
+      this.persistBonusRecord();
       this.hooks.onScore(this.context.addScore(0));
       EventBus.emit(GameEvents.GAME_OVER);
       return;
@@ -395,6 +430,20 @@ export class Level6 implements Level {
     });
   }
 
+  private cullHearts(): void {
+    if (!this.hearts) {
+      return;
+    }
+
+    const bounds = this.context.scene.physics.world.bounds;
+    this.hearts.getChildren().forEach((child) => {
+      const heart = child as Phaser.Physics.Arcade.Image;
+      if (heart.x < bounds.left - 40) {
+        heart.destroy();
+      }
+    });
+  }
+
   private cullStarShots(): void {
     if (!this.starShots) {
       return;
@@ -438,6 +487,8 @@ export class Level6 implements Level {
     this.spawnGiftTimer = undefined;
     this.spawnStarTimer?.remove(false);
     this.spawnStarTimer = undefined;
+    this.spawnHeartTimer?.remove(false);
+    this.spawnHeartTimer = undefined;
     this.spawnSnowballTimer?.remove(false);
     this.spawnSnowballTimer = undefined;
 
@@ -458,12 +509,10 @@ export class Level6 implements Level {
 
     this.snowballs?.clear(true, true);
     this.snowballs = undefined;
-    this.hitSound?.destroy();
-    this.hitSound = undefined;
-    this.sadMeow1?.destroy();
-    this.sadMeow1 = undefined;
-    this.sadMeow2?.destroy();
-    this.sadMeow2 = undefined;
+
+    this.hearts?.clear(true, true);
+    this.hearts = undefined;
+
     this.pickStarSound?.destroy();
     this.pickStarSound = undefined;
     this.starShootSound?.destroy();
@@ -478,7 +527,7 @@ export class Level6 implements Level {
   }
 
   private ensureGiftTexture(): void {
-    if (this.context.scene.textures.exists('gift')) {
+    if (this.context.scene.textures.exists('gift-1')) {
       return;
     }
 
@@ -487,7 +536,13 @@ export class Level6 implements Level {
     graphics.fillRoundedRect(0, 0, 16, 16, 3);
     graphics.lineStyle(2, 0xffffff, 1);
     graphics.strokeRoundedRect(1, 1, 14, 14, 3);
-    graphics.generateTexture('gift', 16, 16);
+    graphics.generateTexture('gift-1', 16, 16);
+    graphics.generateTexture('gift-2', 16, 16);
+    graphics.generateTexture('gift-3', 16, 16);
+    graphics.generateTexture('gift-4', 16, 16);
+    graphics.generateTexture('gift-5', 16, 16);
+    graphics.generateTexture('gift-6', 16, 16);
+    graphics.generateTexture('gift-7', 16, 16);
     graphics.destroy();
   }
 
@@ -499,8 +554,6 @@ export class Level6 implements Level {
     const graphics = this.context.scene.add.graphics();
     graphics.fillStyle(0x6ecbff, 0.45);
     graphics.fillCircle(22, 22, 22);
-    graphics.lineStyle(2, 0xb8e4ff, 0.9);
-    graphics.strokeCircle(22, 22, 22);
     graphics.generateTexture('ice', 44, 44);
     graphics.destroy();
   }
@@ -511,34 +564,25 @@ export class Level6 implements Level {
     }
 
     const graphics = this.context.scene.add.graphics();
-    const points = this.createStarPoints(16, 16, 5, 6.4, 14);
-    graphics.fillStyle(0xfff0a6, 1);
+    graphics.fillStyle(0xffe066, 1);
+    graphics.lineStyle(2, 0xffffff, 0.9);
+    const points: Phaser.Types.Math.Vector2Like[] = [];
+    const centerX = 16;
+    const centerY = 16;
+    const outerRadius = 14;
+    const innerRadius = 6;
+    for (let i = 0; i < 10; i += 1) {
+      const radius = i % 2 === 0 ? outerRadius : innerRadius;
+      const angle = -Math.PI / 2 + i * (Math.PI / 5);
+      points.push({
+        x: centerX + Math.cos(angle) * radius,
+        y: centerY + Math.sin(angle) * radius,
+      });
+    }
     graphics.fillPoints(points, true);
-    graphics.lineStyle(1, 0xffd36a, 1);
     graphics.strokePoints(points, true);
     graphics.generateTexture('star', 32, 32);
     graphics.destroy();
-  }
-
-  private createStarPoints(
-    cx: number,
-    cy: number,
-    pointsCount: number,
-    innerRadius: number,
-    outerRadius: number
-  ): Phaser.Math.Vector2[] {
-    const points: Phaser.Math.Vector2[] = [];
-    const step = Math.PI / pointsCount;
-    let angle = -Math.PI / 2;
-    for (let i = 0; i < pointsCount * 2; i += 1) {
-      const radius = i % 2 === 0 ? outerRadius : innerRadius;
-      points.push(new Phaser.Math.Vector2(
-        cx + Math.cos(angle) * radius,
-        cy + Math.sin(angle) * radius
-      ));
-      angle += step;
-    }
-    return points;
   }
 
   private ensureSnowballTexture(): void {
@@ -553,5 +597,24 @@ export class Level6 implements Level {
     graphics.strokeCircle(8, 8, 8);
     graphics.generateTexture('snowball', 16, 16);
     graphics.destroy();
+  }
+
+  private ensureHeartTexture(): void {
+    if (this.context.scene.textures.exists('heart')) {
+      return;
+    }
+
+    const graphics = this.context.scene.add.graphics();
+    graphics.fillStyle(0xff5b6c, 1);
+    graphics.fillCircle(7, 7, 7);
+    graphics.fillCircle(17, 7, 7);
+    graphics.fillTriangle(0, 9, 24, 9, 12, 24);
+    graphics.generateTexture('heart', 24, 24);
+    graphics.destroy();
+  }
+
+  private persistBonusRecord(): void {
+    const elapsedSeconds = Math.max(0, Math.floor((this.context.scene.time.now - this.startTime) / 1000));
+    updateBonusRecord(this.score, elapsedSeconds);
   }
 }

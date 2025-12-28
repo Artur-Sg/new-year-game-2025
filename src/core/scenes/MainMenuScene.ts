@@ -6,6 +6,7 @@ import { GameEvents } from '../constants/GameEvents';
 import { PlayerSkin } from '../config/playerSkins';
 import { getActiveSkin, setActiveSkin } from '../state/playerSkinStore';
 import { getActiveLevelId, getUnlockedLevelId, setActiveLevelId } from '../state/levelStore';
+import { getBonusRecord } from '../state/bonusRecordStore';
 
 export class MainMenuScene extends Phaser.Scene {
   private titleText!: Phaser.GameObjects.Text;
@@ -14,6 +15,7 @@ export class MainMenuScene extends Phaser.Scene {
   private howToButton!: Phaser.GameObjects.Text;
   private skinLabel!: Phaser.GameObjects.Text;
   private levelLabel!: Phaser.GameObjects.Text;
+  private bonusRecordText!: Phaser.GameObjects.Text;
   private isStarting = false;
   private selectedLevelId = 1;
   private readonly fontSizes = {
@@ -40,6 +42,7 @@ export class MainMenuScene extends Phaser.Scene {
     level: number;
   }> = [];
   private resizeHandler?: (gameSize: Phaser.Structs.Size) => void;
+  private debugKeyHandler?: (event: KeyboardEvent) => void;
 
   constructor() {
     super(SceneKeys.MAIN_MENU);
@@ -53,7 +56,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
     this.titleText.setOrigin(0.5);
 
-    this.subtitleText = this.add.text(0, 0, 'Летай и собирай потерянные подарки Санты!', {
+    this.subtitleText = this.add.text(0, 0, 'Летай и собирай потерянные подарки Деда Мороза!', {
       color: '#a5c6ff',
       align: 'center',
       wordWrap: { width: 540 },
@@ -71,6 +74,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.createSkinPicker();
     this.createLevelPicker();
+    this.createBonusRecord();
 
     this.layout(this.scale.width, this.scale.height);
     this.resizeHandler = (gameSize: Phaser.Structs.Size) => {
@@ -81,7 +85,33 @@ export class MainMenuScene extends Phaser.Scene {
       if (this.resizeHandler) {
         this.scale.off('resize', this.resizeHandler);
       }
+      if (this.debugKeyHandler) {
+        this.input.keyboard?.off('keydown', this.debugKeyHandler);
+      }
     });
+    this.events.on(Phaser.Scenes.Events.WAKE, () => {
+      this.updateBonusRecordText();
+    });
+
+    this.debugKeyHandler = (event: KeyboardEvent) => {
+      const modifier = event.ctrlKey || event.metaKey;
+      if (!modifier) {
+        return;
+      }
+      const code = event.code;
+      const key = event.key;
+      const isKey7 = code === 'Digit7' || code === 'Numpad7' || key === '7';
+      if (!isKey7) {
+        return;
+      }
+      if (getUnlockedLevelId() < 7) {
+        return;
+      }
+      this.selectedLevelId = 7;
+      this.updateLevelSelection();
+      void this.startGame();
+    };
+    this.input.keyboard?.on('keydown', this.debugKeyHandler);
   }
 
   private async startGame(): Promise<void> {
@@ -236,13 +266,14 @@ export class MainMenuScene extends Phaser.Scene {
     this.levelLabel.setOrigin(0.5);
 
     const maxUnlocked = getUnlockedLevelId();
-    const levels = [1, 2, 3, 4, 5, 6];
+    const levels = Array.from({ length: maxUnlocked }, (_, index) => index + 1);
 
     this.levelOptions = levels.map((level) => {
       const frame = this.add.rectangle(0, 0, 56, 56, 0x0b0d1a, 0.9);
       frame.setStrokeStyle(2, 0x334155, 0.8);
 
-      const text = this.add.text(0, 0, String(level), {
+      const label = level === 7 ? 'Бонус' : String(level);
+      const text = this.add.text(0, 0, label, {
         color: '#a5c6ff',
         font: toFont(this.fontSizes.levelOption, getTextScale(this.scale.width, this.scale.height)),
       });
@@ -250,17 +281,13 @@ export class MainMenuScene extends Phaser.Scene {
 
       const container = this.add.container(0, 0, [frame, text]);
 
-      if (level <= maxUnlocked) {
-        frame.setInteractive({ useHandCursor: true })
-          .on('pointerover', () => frame.setStrokeStyle(2, 0xffd447, 0.9))
-          .on('pointerout', () => this.updateLevelSelection())
-          .on('pointerup', () => {
-            this.selectedLevelId = level;
-            this.updateLevelSelection();
-          });
-      } else {
-        container.setAlpha(0.35);
-      }
+      frame.setInteractive({ useHandCursor: true })
+        .on('pointerover', () => frame.setStrokeStyle(2, 0xffd447, 0.9))
+        .on('pointerout', () => this.updateLevelSelection())
+        .on('pointerup', () => {
+          this.selectedLevelId = level;
+          this.updateLevelSelection();
+        });
 
       return { container, frame, label: text, level };
     });
@@ -291,6 +318,25 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
+  private createBonusRecord(): void {
+    this.bonusRecordText = this.add.text(0, 0, '', {
+      color: '#a5c6ff',
+      align: 'center',
+      wordWrap: { width: 520 },
+      font: toFont(this.fontSizes.subtitle, getTextScale(this.scale.width, this.scale.height)),
+    });
+    this.bonusRecordText.setOrigin(0.5);
+    this.updateBonusRecordText();
+  }
+
+  private updateBonusRecordText(): void {
+    const record = getBonusRecord();
+    this.bonusRecordText.setText(
+      `Рекорд бонусного уровня: подарки ${record.gifts} · время ${record.seconds}с`
+    );
+    this.bonusRecordText.setVisible(getUnlockedLevelId() >= 7);
+  }
+
   private layout(width: number, height: number): void {
     this.updateTypography(getTextScale(width, height));
     const centerX = width / 2;
@@ -311,8 +357,10 @@ export class MainMenuScene extends Phaser.Scene {
       option.container.setPosition(centerX + (index - offset) * levelSpacing, levelY);
     });
 
-    this.startButton.setPosition(centerX, height * (440 / GAME_HEIGHT));
-    this.howToButton.setPosition(centerX, height * (500 / GAME_HEIGHT));
+    this.bonusRecordText.setPosition(centerX, height * (430 / GAME_HEIGHT));
+
+    this.startButton.setPosition(centerX, height * (470 / GAME_HEIGHT));
+    this.howToButton.setPosition(centerX, height * (520 / GAME_HEIGHT));
 
     const wrapWidth = Math.min(540, Math.max(280, width - 120));
     this.subtitleText.setWordWrapWidth(wrapWidth);

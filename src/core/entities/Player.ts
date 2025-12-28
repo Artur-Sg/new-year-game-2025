@@ -20,7 +20,7 @@ export class Player {
       this.sprite.setScale(1.5);
       this.useAnimations = true;
     }
-    this.sprite.setDepth(5);
+    this.sprite.setDepth(12);
 
     this.body = this.sprite.body as Phaser.Physics.Arcade.Body;
     if (skin === 'xmascat') {
