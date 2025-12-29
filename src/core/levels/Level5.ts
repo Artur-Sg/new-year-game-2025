@@ -19,6 +19,7 @@ export class Level5 implements Level {
   private shootKey?: Phaser.Input.Keyboard.Key;
   private completed = false;
   private starAmmo = 0;
+  private colliders: Phaser.Physics.Arcade.Collider[] = [];
   private pickStarSound?: Phaser.Sound.BaseSound;
   private starShootSound?: Phaser.Sound.BaseSound;
   private iceBreakSound?: Phaser.Sound.BaseSound;
@@ -60,7 +61,7 @@ export class Level5 implements Level {
     });
     this.iceOverlays = this.context.scene.add.group();
 
-    this.context.scene.physics.add.overlap(this.context.player, this.gifts, (_player, gift) => {
+    this.colliders.push(this.context.scene.physics.add.overlap(this.context.player, this.gifts, (_player, gift) => {
       const frozen = (gift as FrozenGift).getData('frozen');
       if (frozen) {
         return;
@@ -73,23 +74,23 @@ export class Level5 implements Level {
         this.cleanupAll();
         this.hooks.onComplete();
       }
-    });
+    }));
 
-    this.context.scene.physics.add.overlap(this.context.player, this.stars, (_player, star) => {
+    this.colliders.push(this.context.scene.physics.add.overlap(this.context.player, this.stars, (_player, star) => {
       star.destroy();
       this.context.scene.sound.play('sfx-pick-star', { volume: 0.7 });
       this.starAmmo = Math.min(5, this.starAmmo + 1);
       EventBus.emit(GameEvents.STARS_UPDATED, { stars: this.starAmmo });
-    });
+    }));
 
-    this.context.scene.physics.add.overlap(this.starShots, this.gifts, (shot, gift) => {
+    this.colliders.push(this.context.scene.physics.add.overlap(this.starShots, this.gifts, (shot, gift) => {
       const frozenGift = gift as FrozenGift;
       if (frozenGift.getData('frozen')) {
         this.context.scene.sound.play('sfx-ice-break', { volume: 0.7, seek: 0, duration: 0.3 });
         this.unfreezeGift(frozenGift);
       }
       shot.destroy();
-    });
+    }));
 
     this.shootKey = this.context.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
@@ -290,6 +291,8 @@ export class Level5 implements Level {
   }
 
   private cleanupAll(): void {
+    this.colliders.forEach((collider) => collider.destroy());
+    this.colliders = [];
     this.spawnGiftTimer?.remove(false);
     this.spawnGiftTimer = undefined;
     this.spawnStarTimer?.remove(false);

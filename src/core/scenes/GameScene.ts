@@ -99,6 +99,7 @@ export class GameScene extends Phaser.Scene {
       const isKey4 = code === 'Digit4' || code === 'Numpad4' || key === '4';
       const isKey5 = code === 'Digit5' || code === 'Numpad5' || key === '5';
       const isKey6 = code === 'Digit6' || code === 'Numpad6' || key === '6';
+      const isKey7 = code === 'Digit7' || code === 'Numpad7' || key === '7';
 
       if (isKey1) {
         this.startLevel(1);
@@ -112,6 +113,8 @@ export class GameScene extends Phaser.Scene {
         this.startLevel(5);
       } else if (isKey6) {
         this.startLevel(6);
+      } else if (isKey7) {
+        this.startLevel(7);
       } else if (isKeyK) {
         const nextSkin = getActiveSkin() === 'cat-hero' ? 'xmascat' : 'cat-hero';
         setActiveSkin(nextSkin);
@@ -299,6 +302,8 @@ export class GameScene extends Phaser.Scene {
   private handleGameOver(): void {
     this.currentLevel?.destroy();
     this.currentLevel = undefined;
+    this.sound.stopByKey('sfx-sad-meow-1');
+    this.sound.stopByKey('sfx-sad-meow-2');
     this.physics.pause();
     this.scene.pause();
   }

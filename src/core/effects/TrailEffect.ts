@@ -99,7 +99,7 @@ export class TrailEffect {
         blendMode: 'NORMAL',
         radial: false,
       });
-      emitter.setDepth(12);
+      emitter.setDepth(11);
       emitter.tintFill = true;
       emitter.emitting = false;
       emitter.setVisible(false);

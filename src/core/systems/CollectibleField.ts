@@ -5,12 +5,16 @@ export type CollectibleObject = Phaser.GameObjects.Image & {
 };
 
 export class CollectibleField {
-  private group: Phaser.Physics.Arcade.StaticGroup;
+  private group?: Phaser.Physics.Arcade.StaticGroup;
+  private collider?: Phaser.Physics.Arcade.Collider;
   constructor(private scene: Phaser.Scene, private bounds: Phaser.Geom.Rectangle) {
     this.group = this.scene.physics.add.staticGroup();
   }
 
   spawn(count: number): void {
+    if (!this.group) {
+      return;
+    }
     for (let i = 0; i < count; i += 1) {
       const point = this.randomPoint();
       const key = Phaser.Utils.Array.GetRandom(['gift-1', 'gift-2', 'gift-3', 'gift-4', 'gift-5', 'gift-6', 'gift-7']);
@@ -28,7 +32,11 @@ export class CollectibleField {
     target: Phaser.Types.Physics.Arcade.GameObjectWithBody,
     onCollected: () => void
   ): void {
-    this.scene.physics.add.overlap(target, this.group, (_target, object) => {
+    if (!this.group) {
+      return;
+    }
+    this.collider?.destroy();
+    this.collider = this.scene.physics.add.overlap(target, this.group, (_target, object) => {
       const sprite = object as CollectibleObject;
       sprite.destroy();
       onCollected();
@@ -36,7 +44,34 @@ export class CollectibleField {
   }
 
   clear(): void {
+    if (!this.group || !this.group.children || typeof this.group.children.size !== 'number') {
+      return;
+    }
     this.group.clear(true, true);
+  }
+
+  destroy(): void {
+    this.collider?.destroy();
+    this.collider = undefined;
+    if (!this.group) {
+      return;
+    }
+    const group = this.group;
+    this.group = undefined;
+
+    if (group.children && typeof group.children.size === 'number') {
+      try {
+        group.clear(true, true);
+      } catch {
+        // Ignore group clear errors during scene shutdown.
+      }
+    }
+
+    try {
+      group.destroy(true);
+    } catch {
+      // Ignore group destroy errors during scene shutdown.
+    }
   }
 
   setBounds(bounds: Phaser.Geom.Rectangle): void {

@@ -4,6 +4,8 @@ export class BackdropEffect {
   private layers: Array<{
     sprites: [Phaser.GameObjects.Image, Phaser.GameObjects.Image];
     speed: number;
+    offset: number;
+    width: number;
   }> = [];
   private baseSpeed = 55;
 
@@ -24,14 +26,19 @@ export class BackdropEffect {
       const spriteB = this.scene.add.image(0, height / 2, config.key);
       spriteA.setDepth(config.depth);
       spriteB.setDepth(config.depth);
-      this.fitLayerToScreen([spriteA, spriteB], width, height);
-      return { sprites: [spriteA, spriteB], speed: config.speed };
+      const scaledWidth = this.fitLayerToScreen([spriteA, spriteB], width, height);
+      return { sprites: [spriteA, spriteB], speed: config.speed, offset: 0, width: scaledWidth };
     });
   }
 
   resize(width: number, height: number): void {
     this.layers.forEach(({ sprites }) => {
-      this.fitLayerToScreen(sprites, width, height);
+      const scaledWidth = this.fitLayerToScreen(sprites, width, height);
+      const layer = this.layers.find((entry) => entry.sprites === sprites);
+      if (layer) {
+        layer.width = scaledWidth;
+        layer.offset = 0;
+      }
     });
   }
 
@@ -44,16 +51,15 @@ export class BackdropEffect {
     const deltaSeconds = delta / 1000;
     this.layers.forEach(({ sprites, speed }) => {
       const shift = this.baseSpeed * speed * deltaSeconds;
+      const layer = this.layers.find((entry) => entry.sprites === sprites);
+      if (!layer || layer.width <= 0) {
+        return;
+      }
+      layer.offset = (layer.offset + shift) % layer.width;
+      const offset = Math.round(layer.offset);
       const [spriteA, spriteB] = sprites;
-      spriteA.x -= shift;
-      spriteB.x -= shift;
-
-      if (spriteA.x + spriteA.displayWidth <= 0) {
-        spriteA.x = spriteB.x + spriteB.displayWidth;
-      }
-      if (spriteB.x + spriteB.displayWidth <= 0) {
-        spriteB.x = spriteA.x + spriteA.displayWidth;
-      }
+      spriteA.x = -offset;
+      spriteB.x = spriteA.x + layer.width;
     });
   }
 
@@ -61,7 +67,7 @@ export class BackdropEffect {
     sprites: [Phaser.GameObjects.Image, Phaser.GameObjects.Image],
     width: number,
     height: number
-  ): void {
+  ): number {
     const textureKey = sprites[0].texture.key;
     const source = this.scene.textures.get(textureKey).getSourceImage() as { width: number; height: number };
     const scaleX = width / source.width;
@@ -75,5 +81,6 @@ export class BackdropEffect {
     const scaledWidth = source.width * scale;
     sprites[0].setX(0);
     sprites[1].setX(scaledWidth);
+    return scaledWidth;
   }
 }

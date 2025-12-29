@@ -12,6 +12,7 @@ export class Level4 implements Level {
   private spawnSnowballTimer?: Phaser.Time.TimerEvent;
   private completed = false;
   private lastHitAt = 0;
+  private colliders: Phaser.Physics.Arcade.Collider[] = [];
   private hitSound?: Phaser.Sound.BaseSound;
   private sadMeow1?: Phaser.Sound.BaseSound;
   private sadMeow2?: Phaser.Sound.BaseSound;
@@ -48,7 +49,7 @@ export class Level4 implements Level {
       immovable: true,
     });
 
-    this.context.scene.physics.add.overlap(this.context.player, this.gifts, (_player, gift) => {
+    this.colliders.push(this.context.scene.physics.add.overlap(this.context.player, this.gifts, (_player, gift) => {
       gift.destroy();
       const score = this.context.addScore(1);
       this.hooks.onScore(score);
@@ -58,11 +59,11 @@ export class Level4 implements Level {
         this.cleanupSnowballs();
         this.hooks.onComplete();
       }
-    });
+    }));
 
-    this.context.scene.physics.add.overlap(this.context.player, this.snowballs, (_player, snowball) => {
+    this.colliders.push(this.context.scene.physics.add.overlap(this.context.player, this.snowballs, (_player, snowball) => {
       this.handleHit(snowball as Phaser.Physics.Arcade.Image);
-    });
+    }));
 
     this.spawnGiftTimer = this.context.scene.time.addEvent({
       delay: this.config.giftSpawnDelay,
@@ -153,7 +154,7 @@ export class Level4 implements Level {
     } else {
       const meow = this.context.scene.sound.add('sfx-sad-meow-1', { volume: 0.7 });
       meow.play();
-      this.context.scene.time.delayedCall(500, () => {
+      this.context.scene.time.delayedCall(700, () => {
         meow.stop();
         meow.destroy();
       });
@@ -206,6 +207,7 @@ export class Level4 implements Level {
   }
 
   private cleanupGifts(): void {
+    this.cleanupColliders();
     this.spawnGiftTimer?.remove(false);
     this.spawnGiftTimer = undefined;
     this.gifts?.clear(true, true);
@@ -213,6 +215,7 @@ export class Level4 implements Level {
   }
 
   private cleanupSnowballs(): void {
+    this.cleanupColliders();
     this.spawnSnowballTimer?.remove(false);
     this.spawnSnowballTimer = undefined;
     this.snowballs?.clear(true, true);
@@ -223,6 +226,11 @@ export class Level4 implements Level {
     this.sadMeow1 = undefined;
     this.sadMeow2?.destroy();
     this.sadMeow2 = undefined;
+  }
+
+  private cleanupColliders(): void {
+    this.colliders.forEach((collider) => collider.destroy());
+    this.colliders = [];
   }
 
   private ensureGiftTexture(): void {

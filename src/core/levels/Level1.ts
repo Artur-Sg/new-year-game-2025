@@ -42,6 +42,6 @@ export class Level1 implements Level {
   }
 
   destroy(): void {
-    this.collectibles.clear();
+    this.collectibles.destroy();
   }
 }

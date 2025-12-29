@@ -5,8 +5,8 @@ import { PreloadScene } from '../scenes/PreloadScene';
 export const GAME_WIDTH = 960;
 export const GAME_HEIGHT = 540;
 export const LEVEL_ONE_TARGET = 10;
-export const UI_TEXT_SCALE = 1;
-export const UI_FONT_FAMILY = '"Press Start 2P", monospace';
+export const UI_TEXT_SCALE = 1.7;
+export const UI_FONT_FAMILY = '"TMVinograd", serif';
 
 export function getTextScale(width: number, height: number): number {
   const scale = Math.min(width / GAME_WIDTH, height / GAME_HEIGHT);

@@ -20,7 +20,7 @@ export class ForegroundEffect {
   private readonly propGapRange = { min: 10, max: 90 };
   private readonly groundGapRange = { min: 0, max: 30 };
   private readonly houseKeys = ['house-1', 'house-2', 'house-3', 'house-4'];
-  private readonly spawnBuffer = 220;
+  private spawnBuffer = 400;
   private readonly propYOffsetRange = { min: 10, max: 80 };
   private readonly groundPrimaryKey = 'ground-snow';
   private readonly groundPrimaryChance = 65;
@@ -45,6 +45,7 @@ export class ForegroundEffect {
 
   resize(width: number, height: number): void {
     this.updateGroundMetrics(width, height);
+    this.spawnBuffer = Math.max(400, Math.floor(width * 0.6));
     this.reflow(width);
     this.updateGroundBase();
   }
@@ -96,11 +97,10 @@ export class ForegroundEffect {
         item.setScale(2);
         item.setDepth(5.5);
         item.setPosition(rightmostGround + item.displayWidth / 2 + nextGap + this.spawnBuffer, this.groundY);
+        this.alignGroundItem(item);
         rightmostGround = item.x + item.displayWidth / 2;
       }
     });
-
-    this.alignGroundWithProps();
   }
 
   destroy(): void {
@@ -122,6 +122,7 @@ export class ForegroundEffect {
     this.groundItems = [];
     this.propShadows = [];
     this.updateGroundMetrics(this.scene.scale.width, this.scene.scale.height);
+    this.spawnBuffer = Math.max(400, Math.floor(this.scene.scale.width * 0.6));
 
     let x = -this.spawnBuffer;
     const width = this.scene.scale.width;
@@ -279,6 +280,25 @@ export class ForegroundEffect {
         ground.setY(this.groundY);
       }
     });
+  }
+
+  private alignGroundItem(ground: Phaser.GameObjects.Image): void {
+    let closest: Phaser.GameObjects.Image | undefined;
+    let minDistance = this.groundSnapDistance + 1;
+
+    this.propItems.forEach((prop) => {
+      const distance = Math.abs(prop.x - ground.x);
+      if (distance < minDistance) {
+        minDistance = distance;
+        closest = prop;
+      }
+    });
+
+    if (closest && minDistance <= this.groundSnapDistance) {
+      ground.setY(closest.y);
+    } else {
+      ground.setY(this.groundY);
+    }
   }
 
   private updateGroundMetrics(width: number, height: number): void {

@@ -65,6 +65,10 @@ export class PreloadScene extends Phaser.Scene {
     });
     const snowballUrl = new URL('../../assets/snowball.png', import.meta.url).toString();
     this.load.image('snowball', snowballUrl);
+    const menuBackgroundUrl = new URL('../../assets/menu-background.png', import.meta.url).toString();
+    this.load.image('menu-background', menuBackgroundUrl);
+    const levelFinish3Url = new URL('../../assets/levels/finish-3.png', import.meta.url).toString();
+    this.load.image('level-finish-3', levelFinish3Url);
 
     const giftBase = '../../assets/gifts/';
     this.load.image('gift-1', new URL(`${giftBase}gift.png`, import.meta.url).toString());

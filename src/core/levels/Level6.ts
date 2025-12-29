@@ -23,6 +23,7 @@ export class Level6 implements Level {
   private completed = false;
   private lastHitAt = 0;
   private starAmmo = 0;
+  private colliders: Phaser.Physics.Arcade.Collider[] = [];
   private hitSound?: Phaser.Sound.BaseSound;
   private sadMeow1?: Phaser.Sound.BaseSound;
   private sadMeow2?: Phaser.Sound.BaseSound;
@@ -86,7 +87,7 @@ export class Level6 implements Level {
     });
     this.iceOverlays = this.context.scene.add.group();
 
-    this.context.scene.physics.add.overlap(this.context.player, this.gifts, (_player, gift) => {
+    this.colliders.push(this.context.scene.physics.add.overlap(this.context.player, this.gifts, (_player, gift) => {
       const frozen = (gift as FrozenGift).getData('frozen');
       if (frozen) {
         return;
@@ -99,32 +100,32 @@ export class Level6 implements Level {
         this.cleanupAll();
         this.hooks.onComplete();
       }
-    });
+    }));
 
-    this.context.scene.physics.add.overlap(this.context.player, this.stars, (_player, star) => {
+    this.colliders.push(this.context.scene.physics.add.overlap(this.context.player, this.stars, (_player, star) => {
       star.destroy();
       this.context.scene.sound.play('sfx-pick-star', { volume: 0.7 });
       this.starAmmo = Math.min(5, this.starAmmo + 1);
       EventBus.emit(GameEvents.STARS_UPDATED, { stars: this.starAmmo });
-    });
+    }));
 
-    this.context.scene.physics.add.overlap(this.context.player, this.snowballs, (_player, snowball) => {
+    this.colliders.push(this.context.scene.physics.add.overlap(this.context.player, this.snowballs, (_player, snowball) => {
       this.handleHit(snowball as Phaser.Physics.Arcade.Image);
-    });
+    }));
 
-    this.context.scene.physics.add.overlap(this.starShots, this.gifts, (shot, gift) => {
+    this.colliders.push(this.context.scene.physics.add.overlap(this.starShots, this.gifts, (shot, gift) => {
       const frozenGift = gift as FrozenGift;
       if (frozenGift.getData('frozen')) {
         this.context.scene.sound.play('sfx-ice-break', { volume: 0.7, seek: 0, duration: 0.3 });
         this.unfreezeGift(frozenGift);
       }
       shot.destroy();
-    });
-    this.context.scene.physics.add.overlap(this.starShots, this.snowballs, (shot, snowball) => {
+    }));
+    this.colliders.push(this.context.scene.physics.add.overlap(this.starShots, this.snowballs, (shot, snowball) => {
       snowball.destroy();
       this.context.scene.sound.play('sfx-ice-break', { volume: 0.7, seek: 0, duration: 0.3 });
       shot.destroy();
-    });
+    }));
 
     this.shootKey = this.context.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
@@ -292,7 +293,7 @@ export class Level6 implements Level {
     } else {
       const meow = this.context.scene.sound.add('sfx-sad-meow-1', { volume: 0.7 });
       meow.play();
-      this.context.scene.time.delayedCall(500, () => {
+      this.context.scene.time.delayedCall(700, () => {
         meow.stop();
         meow.destroy();
       });
@@ -434,6 +435,8 @@ export class Level6 implements Level {
   }
 
   private cleanupAll(): void {
+    this.colliders.forEach((collider) => collider.destroy());
+    this.colliders = [];
     this.spawnGiftTimer?.remove(false);
     this.spawnGiftTimer = undefined;
     this.spawnStarTimer?.remove(false);

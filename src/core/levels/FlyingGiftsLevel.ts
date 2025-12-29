@@ -19,6 +19,7 @@ export class FlyingGiftsLevel implements Level {
   private spawnTimer?: Phaser.Time.TimerEvent;
   private completed = false;
   private config: FlyingGiftsConfig;
+  private colliders: Phaser.Physics.Arcade.Collider[] = [];
 
   constructor(private context: LevelContext, private hooks: LevelHooks, config: FlyingGiftsConfig) {
     this.id = config.id;
@@ -33,7 +34,7 @@ export class FlyingGiftsLevel implements Level {
       immovable: true,
     });
 
-    this.context.scene.physics.add.overlap(this.context.player, this.gifts, (_player, gift) => {
+    this.colliders.push(this.context.scene.physics.add.overlap(this.context.player, this.gifts, (_player, gift) => {
       gift.destroy();
       const score = this.context.addScore(1);
       this.hooks.onScore(score);
@@ -42,7 +43,7 @@ export class FlyingGiftsLevel implements Level {
         this.cleanupGifts();
         this.hooks.onComplete();
       }
-    });
+    }));
 
     this.spawnTimer = this.context.scene.time.addEvent({
       delay: this.config.spawnDelay,
@@ -159,6 +160,8 @@ export class FlyingGiftsLevel implements Level {
   }
 
   private cleanupGifts(): void {
+    this.colliders.forEach((collider) => collider.destroy());
+    this.colliders = [];
     this.spawnTimer?.remove(false);
     this.spawnTimer = undefined;
     this.gifts?.clear(true, true);
