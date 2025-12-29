@@ -538,7 +538,9 @@ export class MainMenuScene extends Phaser.Scene {
     );
 
     const scale = getTextScale(width, height);
-    const text = this.add.text(modal.x, modal.y - 40, 'Летай на стрелках или WASD\nСобери 10 подарков, Пройди уровень! На некоторых уровнях необходимо будет стрелять используя ПРОБЕЛ', {
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const text = this.add.text(centerX, centerY - 40, 'Летай на стрелках или WASD\nСобери 10 подарков, Пройди уровень! На некоторых уровнях необходимо будет стрелять используя ПРОБЕЛ', {
       color: '#ffffff',
       align: 'center',
       lineSpacing: 10,
@@ -549,8 +551,8 @@ export class MainMenuScene extends Phaser.Scene {
     text.setStroke('#0b0d1a', 3);
     text.setShadow(2, 2, '#0b0d1a', 4, false, true);
 
-    const button = this.createRoundedButton(modal.x, modal.y + modalHeight / 4, 'Понятно');
-    button.container.setPosition(modal.x, modal.y + modalHeight / 4);
+    const button = this.createRoundedButton(centerX, centerY + modalHeight / 4, 'Понятно');
+    button.container.setPosition(centerX, centerY + modalHeight / 4);
     button.container.on('pointerup', () => {
       modal.destroy();
       text.destroy();
