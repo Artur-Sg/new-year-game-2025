@@ -10,7 +10,7 @@ export class UIScene extends Phaser.Scene {
   private timerText!: Phaser.GameObjects.Text;
   private lifeHearts: Phaser.GameObjects.Text[] = [];
   private starsText!: Phaser.GameObjects.Text;
-  private banner!: Phaser.GameObjects.Rectangle;
+  private banner!: Phaser.GameObjects.Graphics;
   private bannerCopy!: Phaser.GameObjects.Text;
   private levelCompleteText!: Phaser.GameObjects.Text;
   private levelCompleteModal!: Phaser.GameObjects.Container;
@@ -140,8 +140,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private createCallToAction(): void {
-    this.banner = this.add.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - 36, 520, 64, 0x0f162a, 0.85);
-    this.banner.setStrokeStyle(2, 0xffe066, 0.7);
+    this.banner = this.add.graphics();
 
     this.bannerCopy = this.add.text(this.banner.x, this.banner.y, '', {
       color: '#ffffff',
@@ -360,9 +359,11 @@ export class UIScene extends Phaser.Scene {
     this.timerText.setPosition(width - 32, hudTopY);
 
     const bannerWidth = Math.min(520, Math.max(320, width - 80));
-    this.banner.setPosition(width / 2, height - 36);
-    this.banner.setSize(bannerWidth, 64);
-    this.bannerCopy.setPosition(this.banner.x, this.banner.y);
+    const bannerHeight = 76;
+    const bannerX = width / 2;
+    const bannerY = height - 36;
+    this.drawBanner(bannerX, bannerY, bannerWidth, bannerHeight);
+    this.bannerCopy.setPosition(bannerX, bannerY);
     this.bannerCopy.setWordWrapWidth(bannerWidth - 40);
 
     this.levelCompleteText.setPosition(width / 2, height / 2);
@@ -601,6 +602,14 @@ export class UIScene extends Phaser.Scene {
     this.levelFinishImage.setDisplaySize(modalWidth, modalHeight);
     this.levelFinishImage.setPosition(0, 0);
     this.modalButton.setPosition(0, 48);
+  }
+
+  private drawBanner(x: number, y: number, width: number, height: number): void {
+    this.banner.clear();
+    this.banner.fillStyle(0x0f162a, 0.85);
+    this.banner.fillRoundedRect(x - width / 2, y - height / 2, width, height, 16);
+    this.banner.lineStyle(2, 0xffe066, 0.7);
+    this.banner.strokeRoundedRect(x - width / 2, y - height / 2, width, height, 16);
   }
 
   private updatePauseButtonArea(button: Phaser.GameObjects.Container, label: Phaser.GameObjects.Text): void {
