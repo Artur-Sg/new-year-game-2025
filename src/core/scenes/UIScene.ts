@@ -21,6 +21,10 @@ export class UIScene extends Phaser.Scene {
   private modalButtonBg!: Phaser.GameObjects.Graphics;
   private levelFinishImage?: Phaser.GameObjects.Image;
   private levelFinishTitle?: Phaser.GameObjects.Text;
+  private levelFinishFooter?: Phaser.GameObjects.Text;
+  private levelFinishMenuButton!: Phaser.GameObjects.Container;
+  private levelFinishMenuLabel!: Phaser.GameObjects.Text;
+  private levelFinishMenuBg!: Phaser.GameObjects.Graphics;
   private levelCompleteLevel = 1;
   private pauseModal!: Phaser.GameObjects.Container;
   private pausePanel!: Phaser.GameObjects.Graphics;
@@ -194,6 +198,16 @@ export class UIScene extends Phaser.Scene {
     this.levelFinishTitle.setStroke('#0b0d1a', 3);
     this.levelFinishTitle.setShadow(2, 2, '#0b0d1a', 4, false, true);
     this.levelFinishTitle.setVisible(false);
+    this.levelFinishFooter = this.add.text(0, 0, '', {
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 480 },
+      font: toFont(this.fontSizes.modalMessage, getTextScale(this.scale.width, this.scale.height)),
+    });
+    this.levelFinishFooter.setOrigin(0.5);
+    this.levelFinishFooter.setStroke('#0b0d1a', 3);
+    this.levelFinishFooter.setShadow(2, 2, '#0b0d1a', 4, false, true);
+    this.levelFinishFooter.setVisible(false);
 
     const modalScale = getTextScale(this.scale.width, this.scale.height);
     this.modalButtonBg = this.add.graphics();
@@ -216,12 +230,38 @@ export class UIScene extends Phaser.Scene {
         EventBus.emit(GameEvents.LEVEL_NEXT);
       });
 
+    this.levelFinishMenuBg = this.add.graphics();
+    this.levelFinishMenuLabel = this.add.text(0, 0, 'В меню', {
+      color: '#0d0f1d',
+      font: toFont(this.fontSizes.modalButton, modalScale),
+    });
+    this.levelFinishMenuLabel.setOrigin(0.5);
+    this.levelFinishMenuButton = this.add.container(0, 48, [
+      this.levelFinishMenuBg,
+      this.levelFinishMenuLabel,
+    ]);
+    this.drawPauseButton(this.levelFinishMenuBg, this.levelFinishMenuLabel, 0xffe066);
+    this.updatePauseButtonArea(this.levelFinishMenuButton, this.levelFinishMenuLabel);
+    const finishMenuHit = this.ensureButtonHitArea(this.levelFinishMenuButton, this.levelFinishMenuLabel);
+    finishMenuHit
+      .on('pointerover', () => this.drawPauseButton(this.levelFinishMenuBg, this.levelFinishMenuLabel, 0xffd447))
+      .on('pointerout', () => this.drawPauseButton(this.levelFinishMenuBg, this.levelFinishMenuLabel, 0xffe066))
+      .on('pointerup', () => {
+        this.clickSound?.play();
+        this.scene.stop(SceneKeys.GAME);
+        this.scene.stop(SceneKeys.UI);
+        this.scene.start(SceneKeys.MAIN_MENU);
+      });
+    this.levelFinishMenuButton.setVisible(false);
+
     this.levelCompleteModal = this.add.container(GAME_WIDTH / 2, GAME_HEIGHT / 2, [
       this.modalPanel,
       this.modalMessage,
       this.levelFinishImage,
       this.levelFinishTitle,
+      this.levelFinishFooter,
       this.modalButton,
+      this.levelFinishMenuButton,
     ]);
     this.levelCompleteModal.setDepth(20);
     this.levelCompleteModal.setVisible(false);
@@ -396,9 +436,13 @@ export class UIScene extends Phaser.Scene {
     this.levelCompleteText.setStyle({ font: toFont(this.fontSizes.levelComplete, scale) });
     this.modalMessage.setStyle({ font: toFont(this.fontSizes.modalMessage, scale) });
     this.levelFinishTitle?.setStyle({ font: toFont(this.fontSizes.modalMessage, scale) });
+    this.levelFinishFooter?.setStyle({ font: toFont(this.fontSizes.modalMessage, scale) });
     this.modalButtonLabel.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
     this.drawPauseButton(this.modalButtonBg, this.modalButtonLabel, 0xffe066);
     this.updatePauseButtonArea(this.modalButton, this.modalButtonLabel);
+    this.levelFinishMenuLabel.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
+    this.drawPauseButton(this.levelFinishMenuBg, this.levelFinishMenuLabel, 0xffe066);
+    this.updatePauseButtonArea(this.levelFinishMenuButton, this.levelFinishMenuLabel);
     this.pauseTitle.setStyle({ font: toFont(this.fontSizes.modalMessage, scale) });
     this.pauseContinueLabel.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
     this.pauseExitLabel.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
@@ -512,6 +556,15 @@ export class UIScene extends Phaser.Scene {
       }
       this.levelFinishImage?.setVisible(showFinishImage);
       this.levelFinishTitle?.setVisible(showFinishImage);
+      const showFooter = payload.level === 6;
+      if (showFooter && this.levelFinishFooter) {
+        this.levelFinishFooter.setText(
+          'Ура! Вы помогли Деду Морозу и спасли подарки! С Новым Годом!'
+        );
+      }
+      this.levelFinishFooter?.setVisible(showFooter);
+      this.modalButton.setVisible(!showFooter);
+      this.levelFinishMenuButton.setVisible(showFooter);
       this.setModalContent(payload.level);
       this.updateLevelCompleteLayout(this.modalPanel.width, this.modalPanel.height);
       this.levelCompleteModal.setVisible(true);
@@ -628,7 +681,11 @@ export class UIScene extends Phaser.Scene {
       this.levelFinishImage.setDisplaySize(modalWidth, imageHeight);
       this.levelFinishImage.setPosition(0, -20);
       this.levelFinishTitle?.setPosition(0, -modalHeight / 2);
+      this.levelFinishFooter?.setWordWrapWidth(Math.max(220, modalWidth - 60));
+      this.levelFinishFooter?.setPosition(0, modalHeight / 2 - 16);
       this.modalButton.setPosition(0, modalHeight / 2 - 28);
+      const menuButtonOffset = this.levelFinishMenuButton.height || 0;
+      this.levelFinishMenuButton.setPosition(0, modalHeight / 2 + 36 + menuButtonOffset);
       return;
     }
     this.levelFinishImage.setDisplaySize(modalWidth, modalHeight);

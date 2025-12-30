@@ -124,14 +124,14 @@ export class Level7 implements Level {
     this.colliders.push(this.context.scene.physics.add.overlap(this.starShots, this.gifts, (shot, gift) => {
       const frozenGift = gift as FrozenGift;
       if (frozenGift.getData('frozen')) {
-        this.context.scene.sound.play('sfx-ice-break', { volume: 0.7, seek: 0, duration: 0.3 });
+        this.context.scene.sound.play('sfx-ice-break', { volume: 0.7, seek: 0 });
         this.unfreezeGift(frozenGift);
       }
       shot.destroy();
     }));
     this.colliders.push(this.context.scene.physics.add.overlap(this.starShots, this.snowballs, (shot, snowball) => {
       snowball.destroy();
-      this.iceBreakSound?.play({ seek: 0, duration: 0.3 });
+      this.iceBreakSound?.play({ seek: 0 });
       shot.destroy();
     }));
 
