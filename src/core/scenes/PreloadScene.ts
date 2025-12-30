@@ -7,6 +7,16 @@ export class PreloadScene extends Phaser.Scene {
   private progressBox?: Phaser.GameObjects.Rectangle;
   private progressBar?: Phaser.GameObjects.Rectangle;
   private progressText?: Phaser.GameObjects.Text;
+  private skipButton?: Phaser.GameObjects.Container;
+  private skipButtonLabel?: Phaser.GameObjects.Text;
+  private skipButtonBg?: Phaser.GameObjects.Graphics;
+  private introVideo?: Phaser.GameObjects.Video;
+  private introSourceWidth = 0;
+  private introSourceHeight = 0;
+  private introStartButton?: Phaser.GameObjects.Container;
+  private introStartLabel?: Phaser.GameObjects.Text;
+  private introStartBg?: Phaser.GameObjects.Graphics;
+  private spaceKey?: Phaser.Input.Keyboard.Key;
   private progressValue = 0;
   private progressTimer?: Phaser.Time.TimerEvent;
   private resizeHandler?: (gameSize: Phaser.Structs.Size) => void;
@@ -30,7 +40,13 @@ export class PreloadScene extends Phaser.Scene {
     this.updateTypography(scale);
 
     this.resizeHandler = (gameSize: Phaser.Structs.Size) => {
-      this.updateTypography(getTextScale(gameSize.width, gameSize.height));
+      const scale = getTextScale(gameSize.width, gameSize.height);
+      this.updateTypography(scale);
+      this.layoutSkipButton(gameSize.width, gameSize.height, scale);
+      this.layoutStartButton(gameSize.width, gameSize.height, scale);
+      if (this.introVideo) {
+        this.layoutIntro(this.introVideo, gameSize.width, gameSize.height);
+      }
     };
     this.scale.on('resize', this.resizeHandler);
 
@@ -67,6 +83,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('snowball', snowballUrl);
     const menuBackgroundUrl = new URL('../../assets/menu-background.png', import.meta.url).toString();
     this.load.image('menu-background', menuBackgroundUrl);
+    const introUrl = new URL('../../assets/video/intro.mp4', import.meta.url).toString();
+    this.load.video('intro', introUrl);
     const levelFinish1Url = new URL('../../assets/levels/finish-1.png', import.meta.url).toString();
     this.load.image('level-finish-1', levelFinish1Url);
     const levelFinish2Url = new URL('../../assets/levels/finish-2.png', import.meta.url).toString();
@@ -127,25 +145,101 @@ export class PreloadScene extends Phaser.Scene {
   }
 
   create(): void {
-    void this.loadMainMenuScene();
+    void this.playIntro();
   }
 
-  private async loadMainMenuScene(): Promise<void> {
-    try {
-      const { MainMenuScene } = await import('./MainMenuScene');
-      this.scene.add(SceneKeys.MAIN_MENU, MainMenuScene, false);
-    } finally {
-      this.progressTimer?.remove();
-      this.setProgress(100);
-      this.progressBox?.destroy();
-      this.progressBar?.destroy();
-      this.progressText?.destroy();
-      if (this.resizeHandler) {
-        this.scale.off('resize', this.resizeHandler);
-      }
+  private async playIntro(): Promise<void> {
+    const { MainMenuScene } = await import('./MainMenuScene');
+    this.scene.add(SceneKeys.MAIN_MENU, MainMenuScene, false);
+    this.finishPreload();
+
+    if (!this.cache.video.exists('intro')) {
+      this.scene.start(SceneKeys.MAIN_MENU);
+      return;
     }
 
-    this.scene.start(SceneKeys.MAIN_MENU);
+    const width = this.scale.width;
+    const height = this.scale.height;
+    const intro = this.add.video(width / 2, height / 2, 'intro');
+    intro.setOrigin(0.5);
+    intro.setVisible(false);
+    intro.setDepth(100);
+    intro.setMute(false);
+    intro.setVolume(1);
+    this.introVideo = intro;
+
+    intro.once('created', (_video: Phaser.GameObjects.Video, sourceWidth: number, sourceHeight: number) => {
+      this.introSourceWidth = sourceWidth;
+      this.introSourceHeight = sourceHeight;
+      this.layoutIntro(intro, this.scale.width, this.scale.height);
+      intro.setVisible(true);
+    });
+
+    intro.once('complete', () => {
+      intro.destroy();
+      this.introVideo = undefined;
+      this.spaceKey?.off('down');
+      this.skipButton?.destroy();
+      this.introStartButton?.destroy();
+      this.scene.start(SceneKeys.MAIN_MENU);
+    });
+    intro.once('error', () => {
+      intro.destroy();
+      this.introVideo = undefined;
+      this.spaceKey?.off('down');
+      this.skipButton?.destroy();
+      this.introStartButton?.destroy();
+      this.scene.start(SceneKeys.MAIN_MENU);
+    });
+
+    this.createSkipButton(() => {
+      if (intro.isPlaying()) {
+        intro.stop();
+      }
+      intro.destroy();
+      this.introVideo = undefined;
+      this.spaceKey?.off('down');
+      this.skipButton?.destroy();
+      this.introStartButton?.destroy();
+      this.scene.start(SceneKeys.MAIN_MENU);
+    });
+    this.layoutSkipButton(width, height, getTextScale(width, height));
+    this.skipButton?.setDepth(110);
+    this.skipButton?.setVisible(false);
+
+    this.createStartButton(() => {
+      const started = intro.play(false);
+      if (started) {
+        this.introStartButton?.destroy();
+        this.introStartButton = undefined;
+        this.skipButton?.setVisible(true);
+      }
+    });
+    this.layoutStartButton(width, height, getTextScale(width, height));
+    this.introStartButton?.setDepth(120);
+
+    this.spaceKey = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE, true);
+    this.spaceKey?.on('down', () => {
+      if (intro.isPlaying()) {
+        intro.stop();
+      }
+      intro.destroy();
+      this.introVideo = undefined;
+      this.skipButton?.destroy();
+      this.introStartButton?.destroy();
+      this.scene.start(SceneKeys.MAIN_MENU);
+    });
+  }
+
+  private finishPreload(): void {
+    this.progressTimer?.remove();
+    this.setProgress(100);
+    this.progressBox?.destroy();
+    this.progressBar?.destroy();
+    this.progressText?.destroy();
+    if (this.resizeHandler) {
+      this.scale.off('resize', this.resizeHandler);
+    }
   }
 
   private setProgress(value: number): void {
@@ -162,5 +256,149 @@ export class PreloadScene extends Phaser.Scene {
     if (this.progressText) {
       this.progressText.setStyle({ font: toFont(16, scale) });
     }
+    if (this.skipButtonLabel) {
+      this.skipButtonLabel.setStyle({ font: toFont(16, scale) });
+      this.redrawSkipButton();
+    }
+    if (this.introStartLabel) {
+      this.introStartLabel.setStyle({ font: toFont(18, scale) });
+      this.redrawStartButton();
+    }
+  }
+
+  private createSkipButton(onSkip: () => void): void {
+    this.skipButtonBg = this.add.graphics();
+    this.skipButtonLabel = this.add.text(0, 0, 'Пропустить', {
+      font: toFont(16, getTextScale(this.scale.width, this.scale.height)),
+      color: '#0d0f1d',
+    });
+    this.skipButtonLabel.setOrigin(0.5);
+    this.skipButton = this.add.container(0, 0, [this.skipButtonBg, this.skipButtonLabel]);
+    this.redrawSkipButton();
+
+    const hit = this.add.zone(0, 0, 1, 1);
+    hit.setOrigin(0.5);
+    hit.setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => this.redrawSkipButton(0xffd447));
+    hit.on('pointerout', () => this.redrawSkipButton(0xffe066));
+    hit.on('pointerup', () => {
+      this.sound.play('sfx-button-click', { volume: 0.6 });
+      onSkip();
+    });
+    this.skipButton.addAt(hit, 0);
+    this.skipButton.setData('hitZone', hit);
+    this.updateSkipButtonHitArea();
+  }
+
+  private redrawSkipButton(color: number = 0xffe066): void {
+    if (!this.skipButtonBg || !this.skipButtonLabel) {
+      return;
+    }
+    const paddingX = 18;
+    const paddingY = 10;
+    const width = this.skipButtonLabel.width * this.skipButtonLabel.scaleX + paddingX * 2;
+    const height = this.skipButtonLabel.height * this.skipButtonLabel.scaleY + paddingY * 2;
+    this.skipButtonBg.clear();
+    this.skipButtonBg.fillStyle(color, 1);
+    this.skipButtonBg.fillRoundedRect(-width / 2, -height / 2, width, height, 12);
+    this.updateSkipButtonHitArea(width, height);
+  }
+
+  private updateSkipButtonHitArea(width?: number, height?: number): void {
+    if (!this.skipButton || !this.skipButtonLabel) {
+      return;
+    }
+    const actualWidth = width ?? this.skipButtonLabel.width * this.skipButtonLabel.scaleX + 36;
+    const actualHeight = height ?? this.skipButtonLabel.height * this.skipButtonLabel.scaleY + 20;
+    const hitZone = this.skipButton.getData('hitZone') as Phaser.GameObjects.Zone | undefined;
+    if (hitZone) {
+      hitZone.setSize(actualWidth, actualHeight);
+    }
+    this.skipButton.setSize(actualWidth, actualHeight);
+  }
+
+  private layoutSkipButton(width: number, height: number, scale: number): void {
+    if (!this.skipButton || !this.skipButtonLabel) {
+      return;
+    }
+    this.skipButtonLabel.setStyle({ font: toFont(16, scale) });
+    this.redrawSkipButton();
+    this.skipButton.setPosition(width / 2, height - 48);
+  }
+
+  private createStartButton(onStart: () => void): void {
+    this.introStartBg = this.add.graphics();
+    this.introStartLabel = this.add.text(0, 0, 'Старт', {
+      font: toFont(18, getTextScale(this.scale.width, this.scale.height)),
+      color: '#0d0f1d',
+    });
+    this.introStartLabel.setOrigin(0.5);
+    this.introStartButton = this.add.container(0, 0, [this.introStartBg, this.introStartLabel]);
+    this.redrawStartButton();
+
+    const hit = this.add.zone(0, 0, 1, 1);
+    hit.setOrigin(0.5);
+    hit.setInteractive({ useHandCursor: true });
+    hit.on('pointerover', () => this.redrawStartButton(0xffd447));
+    hit.on('pointerout', () => this.redrawStartButton(0xffe066));
+    hit.on('pointerup', () => {
+      this.sound.play('sfx-button-click', { volume: 0.6 });
+      onStart();
+    });
+    this.introStartButton.addAt(hit, 0);
+    this.introStartButton.setData('hitZone', hit);
+    this.updateStartButtonHitArea();
+  }
+
+  private redrawStartButton(color: number = 0xffe066): void {
+    if (!this.introStartBg || !this.introStartLabel) {
+      return;
+    }
+    const paddingX = 22;
+    const paddingY = 12;
+    const width = this.introStartLabel.width * this.introStartLabel.scaleX + paddingX * 2;
+    const height = this.introStartLabel.height * this.introStartLabel.scaleY + paddingY * 2;
+    this.introStartBg.clear();
+    this.introStartBg.fillStyle(color, 1);
+    this.introStartBg.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
+    this.updateStartButtonHitArea(width, height);
+  }
+
+  private updateStartButtonHitArea(width?: number, height?: number): void {
+    if (!this.introStartButton || !this.introStartLabel) {
+      return;
+    }
+    const actualWidth = width ?? this.introStartLabel.width * this.introStartLabel.scaleX + 44;
+    const actualHeight = height ?? this.introStartLabel.height * this.introStartLabel.scaleY + 24;
+    const hitZone = this.introStartButton.getData('hitZone') as Phaser.GameObjects.Zone | undefined;
+    if (hitZone) {
+      hitZone.setSize(actualWidth, actualHeight);
+    }
+    this.introStartButton.setSize(actualWidth, actualHeight);
+  }
+
+  private layoutStartButton(width: number, height: number, scale: number): void {
+    if (!this.introStartButton || !this.introStartLabel) {
+      return;
+    }
+    this.introStartLabel.setStyle({ font: toFont(18, scale) });
+    this.redrawStartButton();
+    this.introStartButton.setPosition(width / 2, height / 2);
+  }
+
+  private layoutIntro(
+    intro: Phaser.GameObjects.Video,
+    width: number,
+    height: number
+  ): void {
+    const sourceWidth = this.introSourceWidth;
+    const sourceHeight = this.introSourceHeight;
+    if (!sourceWidth || !sourceHeight) {
+      return;
+    }
+    const maxWidth = width * 0.8;
+    const maxHeight = height * 0.8;
+    const scale = Math.min(maxWidth / sourceWidth, maxHeight / sourceHeight);
+    intro.setDisplaySize(sourceWidth * scale, sourceHeight * scale);
   }
 }
