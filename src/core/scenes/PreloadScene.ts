@@ -67,8 +67,18 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('snowball', snowballUrl);
     const menuBackgroundUrl = new URL('../../assets/menu-background.png', import.meta.url).toString();
     this.load.image('menu-background', menuBackgroundUrl);
+    const levelFinish1Url = new URL('../../assets/levels/finish-1.png', import.meta.url).toString();
+    this.load.image('level-finish-1', levelFinish1Url);
+    const levelFinish2Url = new URL('../../assets/levels/finish-2.png', import.meta.url).toString();
+    this.load.image('level-finish-2', levelFinish2Url);
     const levelFinish3Url = new URL('../../assets/levels/finish-3.png', import.meta.url).toString();
     this.load.image('level-finish-3', levelFinish3Url);
+    const levelFinish4Url = new URL('../../assets/levels/finish-4.png', import.meta.url).toString();
+    this.load.image('level-finish-4', levelFinish4Url);
+    const levelFinish5Url = new URL('../../assets/levels/finish-5.png', import.meta.url).toString();
+    this.load.image('level-finish-5', levelFinish5Url);
+    const levelFinish6Url = new URL('../../assets/levels/finish-6.png', import.meta.url).toString();
+    this.load.image('level-finish-6', levelFinish6Url);
 
     const giftBase = '../../assets/gifts/';
     this.load.image('gift-1', new URL(`${giftBase}gift.png`, import.meta.url).toString());
@@ -80,6 +90,8 @@ export class PreloadScene extends Phaser.Scene {
     this.load.image('gift-7', new URL(`${giftBase}gift7.png`, import.meta.url).toString());
 
     this.load.audio('sfx-pick', new URL('../../assets/audio/pick.mp3', import.meta.url).toString());
+    this.load.audio('sfx-button-click', new URL('../../assets/audio/button-click.mp3', import.meta.url).toString());
+    this.load.audio('sfx-game-start', new URL('../../assets/audio/game-start.mp3', import.meta.url).toString());
     this.load.audio('sfx-success', new URL('../../assets/audio/success.mp3', import.meta.url).toString());
     this.load.audio('sfx-no-luck', new URL('../../assets/audio/no-luck.mp3', import.meta.url).toString());
     this.load.audio('sfx-snowball-hit', new URL('../../assets/audio/snowball-hit.mp3', import.meta.url).toString());
@@ -88,6 +100,15 @@ export class PreloadScene extends Phaser.Scene {
     this.load.audio('sfx-pick-star', new URL('../../assets/audio/pick-star.mp3', import.meta.url).toString());
     this.load.audio('sfx-star-shoot', new URL('../../assets/audio/star-shoot.mp3', import.meta.url).toString());
     this.load.audio('sfx-ice-break', new URL('../../assets/audio/ice-break.mp3', import.meta.url).toString());
+    const bgmBase = '../../assets/audio/background/';
+    this.load.audio('bgm-menu', new URL(`${bgmBase}menu.mp3`, import.meta.url).toString());
+    this.load.audio('bgm-1', new URL(`${bgmBase}1.mp3`, import.meta.url).toString());
+    this.load.audio('bgm-2', new URL(`${bgmBase}2.mp3`, import.meta.url).toString());
+    this.load.audio('bgm-3', new URL(`${bgmBase}3.mp3`, import.meta.url).toString());
+    this.load.audio('bgm-4', new URL(`${bgmBase}4.mp3`, import.meta.url).toString());
+    this.load.audio('bgm-5', new URL(`${bgmBase}5.mp3`, import.meta.url).toString());
+    this.load.audio('bgm-6', new URL(`${bgmBase}6.mp3`, import.meta.url).toString());
+    this.load.audio('bgm-7', new URL(`${bgmBase}7.mp3`, import.meta.url).toString());
 
     const forestBase = '../../assets/forest/';
     this.load.image('forest-bg-1', new URL(`${forestBase}Background 1.png`, import.meta.url).toString());

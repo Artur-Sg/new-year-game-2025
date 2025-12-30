@@ -131,6 +131,7 @@ export class Level7 implements Level {
     }));
     this.colliders.push(this.context.scene.physics.add.overlap(this.starShots, this.snowballs, (shot, snowball) => {
       snowball.destroy();
+      this.iceBreakSound?.play({ seek: 0, duration: 0.3 });
       shot.destroy();
     }));
 

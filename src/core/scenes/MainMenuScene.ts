@@ -34,6 +34,7 @@ export class MainMenuScene extends Phaser.Scene {
   private skinLabel!: Phaser.GameObjects.Text;
   private levelLabel!: Phaser.GameObjects.Text;
   private bonusRecordText!: Phaser.GameObjects.Text;
+  private menuMusic?: Phaser.Sound.BaseSound;
   private isStarting = false;
   private selectedLevelId = 1;
   private readonly fontSizes = {
@@ -70,6 +71,7 @@ export class MainMenuScene extends Phaser.Scene {
 
   create(): void {
     this.isStarting = false;
+    this.playMenuMusic();
     this.backgroundImage = this.add.image(0, 0, 'menu-background').setOrigin(0, 0);
     this.backgroundImage.setDepth(-1);
     this.backgroundShade = this.add.rectangle(0, 0, this.scale.width, this.scale.height, 0x0b0d1a, 0.35);
@@ -95,14 +97,14 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.startButton = this.createRoundedButton(0, 0, 'Старт');
     this.startButton.container.on('pointerup', () => {
-      this.sound.play('sfx-pick', { volume: 0.6 });
+      this.sound.play('sfx-game-start', { volume: 0.7 });
       void this.startGame();
     });
 
     this.howToButton = this.createRoundedButton(0, 0, 'Как играть');
     this.howToButton.container
       .on('pointerup', () => {
-        this.sound.play('sfx-pick', { volume: 0.6 });
+        this.sound.play('sfx-button-click', { volume: 0.6 });
         this.showHowToPlay();
       });
 
@@ -116,6 +118,7 @@ export class MainMenuScene extends Phaser.Scene {
     };
     this.scale.on('resize', this.resizeHandler);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.stopMenuMusic();
       if (this.resizeHandler) {
         this.scale.off('resize', this.resizeHandler);
       }
@@ -125,6 +128,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
     this.events.on(Phaser.Scenes.Events.WAKE, () => {
       this.updateBonusRecordText();
+      this.playMenuMusic();
     });
 
     this.debugKeyHandler = (event: KeyboardEvent) => {
@@ -143,6 +147,7 @@ export class MainMenuScene extends Phaser.Scene {
       }
       this.selectedLevelId = 7;
       this.updateLevelSelection();
+      this.sound.play('sfx-game-start', { volume: 0.7 });
       void this.startGame();
     };
     this.input.keyboard?.on('keydown', this.debugKeyHandler);
@@ -153,6 +158,7 @@ export class MainMenuScene extends Phaser.Scene {
       return;
     }
     this.isStarting = true;
+    this.stopMenuMusic();
 
     setActiveLevelId(this.selectedLevelId);
 
@@ -235,6 +241,19 @@ export class MainMenuScene extends Phaser.Scene {
         });
       },
     };
+  }
+
+  private playMenuMusic(): void {
+    if (!this.menuMusic) {
+      this.menuMusic = this.sound.add('bgm-menu', { loop: true, volume: 0.22 });
+    }
+    if (!this.menuMusic.isPlaying) {
+      this.menuMusic.play();
+    }
+  }
+
+  private stopMenuMusic(): void {
+    this.menuMusic?.stop();
   }
 
   private createRoundedButton(x: number, y: number, label: string): RoundedButton {
@@ -339,7 +358,7 @@ export class MainMenuScene extends Phaser.Scene {
         .on('pointerover', () => this.drawRoundedFrame(frame, this.skinFrameSize, 0xffd447, 0.9))
         .on('pointerout', () => this.updateSkinSelection())
         .on('pointerup', () => {
-          this.sound.play('sfx-pick', { volume: 0.6 });
+          this.sound.play('sfx-button-click', { volume: 0.6 });
           setActiveSkin(option.skin);
           this.updateSkinSelection();
         });
@@ -393,7 +412,7 @@ export class MainMenuScene extends Phaser.Scene {
         .on('pointerover', () => this.drawRoundedFrame(frame, this.levelFrameSize, 0xffd447, 0.9))
         .on('pointerout', () => this.updateLevelSelection())
         .on('pointerup', () => {
-          this.sound.play('sfx-pick', { volume: 0.6 });
+          this.sound.play('sfx-button-click', { volume: 0.6 });
           this.selectedLevelId = level;
           this.updateLevelSelection();
         });
@@ -554,6 +573,7 @@ export class MainMenuScene extends Phaser.Scene {
     const button = this.createRoundedButton(centerX, centerY + modalHeight / 4, 'Понятно');
     button.container.setPosition(centerX, centerY + modalHeight / 4);
     button.container.on('pointerup', () => {
+      this.sound.play('sfx-button-click', { volume: 0.6 });
       modal.destroy();
       text.destroy();
       button.container.destroy();

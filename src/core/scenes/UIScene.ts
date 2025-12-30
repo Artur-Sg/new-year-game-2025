@@ -42,6 +42,7 @@ export class UIScene extends Phaser.Scene {
   private gameOverRetryBg!: Phaser.GameObjects.Graphics;
   private resizeHandler?: (gameSize: Phaser.Structs.Size) => void;
   private pickSound?: Phaser.Sound.BaseSound;
+  private clickSound?: Phaser.Sound.BaseSound;
   private successSound?: Phaser.Sound.BaseSound;
   private noLuckSound?: Phaser.Sound.BaseSound;
   private lastScore = 0;
@@ -154,7 +155,8 @@ export class UIScene extends Phaser.Scene {
 
   private setupAudio(): void {
     this.pickSound = this.sound.add('sfx-pick', { volume: 0.6 });
-    this.successSound = this.sound.add('sfx-success', { volume: 0.8 });
+    this.clickSound = this.sound.add('sfx-button-click', { volume: 0.6 });
+    this.successSound = this.sound.add('sfx-success', { volume: 1 });
     this.noLuckSound = this.sound.add('sfx-no-luck', { volume: 0.8 });
   }
 
@@ -208,6 +210,7 @@ export class UIScene extends Phaser.Scene {
       .on('pointerover', () => this.drawPauseButton(this.modalButtonBg, this.modalButtonLabel, 0xffd447))
       .on('pointerout', () => this.drawPauseButton(this.modalButtonBg, this.modalButtonLabel, 0xffe066))
       .on('pointerup', () => {
+        this.clickSound?.play();
         this.levelCompleteModal.setVisible(false);
         this.levelCompleteText.setVisible(false);
         EventBus.emit(GameEvents.LEVEL_NEXT);
@@ -250,6 +253,7 @@ export class UIScene extends Phaser.Scene {
       .on('pointerover', () => this.drawPauseButton(this.gameOverRetryBg, this.gameOverRetryLabel, 0xffd447))
       .on('pointerout', () => this.drawPauseButton(this.gameOverRetryBg, this.gameOverRetryLabel, 0xffe066))
       .on('pointerup', () => {
+        this.clickSound?.play();
         setActiveLevelId(getActiveLevelId());
         this.scene.stop(SceneKeys.GAME);
         this.scene.start(SceneKeys.GAME);
@@ -270,6 +274,7 @@ export class UIScene extends Phaser.Scene {
       .on('pointerover', () => this.drawPauseButton(this.gameOverButtonBg, this.gameOverButtonLabel, 0xffd447))
       .on('pointerout', () => this.drawPauseButton(this.gameOverButtonBg, this.gameOverButtonLabel, 0xffe066))
       .on('pointerup', () => {
+        this.clickSound?.play();
         this.scene.stop(SceneKeys.GAME);
         this.scene.stop(SceneKeys.UI);
         this.scene.start(SceneKeys.MAIN_MENU);
@@ -310,7 +315,7 @@ export class UIScene extends Phaser.Scene {
       .on('pointerover', () => this.drawPauseButton(this.pauseContinueBg, this.pauseContinueLabel, 0xffd447))
       .on('pointerout', () => this.drawPauseButton(this.pauseContinueBg, this.pauseContinueLabel, 0xffe066))
       .on('pointerup', () => {
-        this.pickSound?.play({ seek: 0.3 });
+        this.clickSound?.play();
         this.resumeFromPause();
       });
 
@@ -328,7 +333,7 @@ export class UIScene extends Phaser.Scene {
       .on('pointerover', () => this.drawPauseButton(this.pauseExitBg, this.pauseExitLabel, 0xffd447))
       .on('pointerout', () => this.drawPauseButton(this.pauseExitBg, this.pauseExitLabel, 0xffe066))
       .on('pointerup', () => {
-        this.pickSound?.play({ seek: 0.3 });
+        this.clickSound?.play();
         window.location.reload();
       });
 
@@ -453,7 +458,7 @@ export class UIScene extends Phaser.Scene {
 
   private getBannerCopy(level: number): string {
     if (level === 1) {
-      return `Собери ${LEVEL_ONE_TARGET} подарков, чтобы пройти уровень 1`;
+      return `Собери ${LEVEL_ONE_TARGET} подарков, чтобы выиграть`;
     }
     if (level === 2) {
       return `Подарки уносит ветром!`;
@@ -482,9 +487,29 @@ export class UIScene extends Phaser.Scene {
     this.levelCompleteText.setVisible(true);
     this.successSound?.play();
     if (payload.level >= 1 && payload.level <= 6) {
-      const showFinishImage = payload.level === 3;
+      const showFinishImage =
+        payload.level === 1 ||
+        payload.level === 2 ||
+        payload.level === 3 ||
+        payload.level === 4 ||
+        payload.level === 5 ||
+        payload.level === 6;
       this.modalPanel.setVisible(!showFinishImage);
       this.modalMessage.setVisible(!showFinishImage);
+      if (showFinishImage && this.levelFinishImage) {
+        const finishKey = payload.level === 1
+          ? 'level-finish-1'
+          : payload.level === 2
+            ? 'level-finish-2'
+            : payload.level === 3
+              ? 'level-finish-3'
+              : payload.level === 4
+                ? 'level-finish-4'
+                : payload.level === 5
+                  ? 'level-finish-5'
+                  : 'level-finish-6';
+        this.levelFinishImage.setTexture(finishKey);
+      }
       this.levelFinishImage?.setVisible(showFinishImage);
       this.levelFinishTitle?.setVisible(showFinishImage);
       this.setModalContent(payload.level);
@@ -591,7 +616,14 @@ export class UIScene extends Phaser.Scene {
     if (!this.levelFinishImage) {
       return;
     }
-    if (this.levelCompleteLevel === 3) {
+    if (
+      this.levelCompleteLevel === 1 ||
+      this.levelCompleteLevel === 2 ||
+      this.levelCompleteLevel === 3 ||
+      this.levelCompleteLevel === 4 ||
+      this.levelCompleteLevel === 5 ||
+      this.levelCompleteLevel === 6
+    ) {
       const imageHeight = Math.max(120, modalHeight - 80);
       this.levelFinishImage.setDisplaySize(modalWidth, imageHeight);
       this.levelFinishImage.setPosition(0, -20);

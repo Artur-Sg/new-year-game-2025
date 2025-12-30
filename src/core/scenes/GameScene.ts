@@ -42,6 +42,8 @@ export class GameScene extends Phaser.Scene {
   private levelFilter?: Phaser.GameObjects.Rectangle;
   private readonly levelFilterAlpha = 0.28;
   private filterPhase = 0;
+  private levelMusic?: Phaser.Sound.BaseSound;
+  private levelMusicKey?: string;
 
   constructor() {
     super(SceneKeys.GAME);
@@ -49,6 +51,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor('#0d0f1d');
+    this.sound.stopByKey('bgm-menu');
     this.levelCompleted = false;
     this.playerSkin = getActiveSkin();
     this.backdropEffect = new BackdropEffect(this);
@@ -135,6 +138,10 @@ export class GameScene extends Phaser.Scene {
       }
       this.currentLevel?.destroy();
       this.currentLevel = undefined;
+      this.levelMusic?.stop();
+      this.levelMusic?.destroy();
+      this.levelMusic = undefined;
+      this.levelMusicKey = undefined;
       this.trailEffect?.destroy();
       this.backdropEffect?.destroy();
       this.levelFilter?.destroy();
@@ -169,6 +176,7 @@ export class GameScene extends Phaser.Scene {
     this.currentLevelId = id;
     this.level = id;
     this.levelCompleted = false;
+    this.playLevelMusic(id);
     this.state.start();
     this.state.setLives(id === 4 || id === 6 || id === 7 ? 3 : 0);
     EventBus.emit(GameEvents.LIVES_UPDATED, { lives: this.state.getLives() });
@@ -333,5 +341,17 @@ export class GameScene extends Phaser.Scene {
     this.filterPhase = (this.filterPhase + delta * 0.00006) % 1;
     const color = Phaser.Display.Color.HSVToRGB(this.filterPhase, 0.35, 0.85);
     this.levelFilter.setFillStyle(color.color, this.levelFilterAlpha);
+  }
+
+  private playLevelMusic(levelId: number): void {
+    const key = `bgm-${levelId}`;
+    if (this.levelMusicKey === key && this.levelMusic?.isPlaying) {
+      return;
+    }
+    this.levelMusic?.stop();
+    this.levelMusic?.destroy();
+    this.levelMusic = this.sound.add(key, { loop: true, volume: 0.22 });
+    this.levelMusic.play();
+    this.levelMusicKey = key;
   }
 }
