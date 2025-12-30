@@ -80,14 +80,13 @@ export class PreloadScene extends Phaser.Scene {
     const levelFinish6Url = new URL('../../assets/levels/finish-6.png', import.meta.url).toString();
     this.load.image('level-finish-6', levelFinish6Url);
 
-    const giftBase = '../../assets/gifts/';
-    this.load.image('gift-1', new URL(`${giftBase}gift.png`, import.meta.url).toString());
-    this.load.image('gift-2', new URL(`${giftBase}gift2.png`, import.meta.url).toString());
-    this.load.image('gift-3', new URL(`${giftBase}gift3.png`, import.meta.url).toString());
-    this.load.image('gift-4', new URL(`${giftBase}gift4.png`, import.meta.url).toString());
-    this.load.image('gift-5', new URL(`${giftBase}gift5.png`, import.meta.url).toString());
-    this.load.image('gift-6', new URL(`${giftBase}gift6.png`, import.meta.url).toString());
-    this.load.image('gift-7', new URL(`${giftBase}gift7.png`, import.meta.url).toString());
+    this.load.image('gift-1', new URL('../../assets/gifts/gift.png', import.meta.url).toString());
+    this.load.image('gift-2', new URL('../../assets/gifts/gift2.png', import.meta.url).toString());
+    this.load.image('gift-3', new URL('../../assets/gifts/gift3.png', import.meta.url).toString());
+    this.load.image('gift-4', new URL('../../assets/gifts/gift4.png', import.meta.url).toString());
+    this.load.image('gift-5', new URL('../../assets/gifts/gift5.png', import.meta.url).toString());
+    this.load.image('gift-6', new URL('../../assets/gifts/gift6.png', import.meta.url).toString());
+    this.load.image('gift-7', new URL('../../assets/gifts/gift7.png', import.meta.url).toString());
 
     this.load.audio('sfx-pick', new URL('../../assets/audio/pick.mp3', import.meta.url).toString());
     this.load.audio('sfx-button-click', new URL('../../assets/audio/button-click.mp3', import.meta.url).toString());
@@ -100,26 +99,30 @@ export class PreloadScene extends Phaser.Scene {
     this.load.audio('sfx-pick-star', new URL('../../assets/audio/pick-star.mp3', import.meta.url).toString());
     this.load.audio('sfx-star-shoot', new URL('../../assets/audio/star-shoot.mp3', import.meta.url).toString());
     this.load.audio('sfx-ice-break', new URL('../../assets/audio/ice-break.mp3', import.meta.url).toString());
-    const bgmBase = '../../assets/audio/background/';
-    this.load.audio('bgm-menu', new URL(`${bgmBase}menu.mp3`, import.meta.url).toString());
-    this.load.audio('bgm-1', new URL(`${bgmBase}1.mp3`, import.meta.url).toString());
-    this.load.audio('bgm-2', new URL(`${bgmBase}2.mp3`, import.meta.url).toString());
-    this.load.audio('bgm-3', new URL(`${bgmBase}3.mp3`, import.meta.url).toString());
-    this.load.audio('bgm-4', new URL(`${bgmBase}4.mp3`, import.meta.url).toString());
-    this.load.audio('bgm-5', new URL(`${bgmBase}5.mp3`, import.meta.url).toString());
-    this.load.audio('bgm-6', new URL(`${bgmBase}6.mp3`, import.meta.url).toString());
-    this.load.audio('bgm-7', new URL(`${bgmBase}7.mp3`, import.meta.url).toString());
+    this.load.audio('bgm-menu', new URL('../../assets/audio/background/menu.mp3', import.meta.url).toString());
+    this.load.audio('bgm-1', new URL('../../assets/audio/background/1.mp3', import.meta.url).toString());
+    this.load.audio('bgm-2', new URL('../../assets/audio/background/2.mp3', import.meta.url).toString());
+    this.load.audio('bgm-3', new URL('../../assets/audio/background/3.mp3', import.meta.url).toString());
+    this.load.audio('bgm-4', new URL('../../assets/audio/background/4.mp3', import.meta.url).toString());
+    this.load.audio('bgm-5', new URL('../../assets/audio/background/5.mp3', import.meta.url).toString());
+    this.load.audio('bgm-6', new URL('../../assets/audio/background/6.mp3', import.meta.url).toString());
+    this.load.audio('bgm-7', new URL('../../assets/audio/background/7.mp3', import.meta.url).toString());
 
-    const forestBase = '../../assets/forest/';
-    this.load.image('forest-bg-1', new URL(`${forestBase}Background 1.png`, import.meta.url).toString());
-    this.load.image('forest-bg-1b', new URL(`${forestBase}Background 1.2.png`, import.meta.url).toString());
-    this.load.image('forest-bg-2', new URL(`${forestBase}Background 2.png`, import.meta.url).toString());
-    this.load.image('forest-bg-3', new URL(`${forestBase}Background 3.png`, import.meta.url).toString());
-    this.load.image('forest-bg-4', new URL(`${forestBase}Background 4.png`, import.meta.url).toString());
-    this.load.image('forest-bg-5', new URL(`${forestBase}Background 5.png`, import.meta.url).toString());
-    const forestSliceBase = '../../assets/forest/slices/';
+    this.load.image('forest-bg-1', new URL('../../assets/forest/Background 1.png', import.meta.url).toString());
+    this.load.image('forest-bg-1b', new URL('../../assets/forest/Background 1.2.png', import.meta.url).toString());
+    this.load.image('forest-bg-2', new URL('../../assets/forest/Background 2.png', import.meta.url).toString());
+    this.load.image('forest-bg-3', new URL('../../assets/forest/Background 3.png', import.meta.url).toString());
+    this.load.image('forest-bg-4', new URL('../../assets/forest/Background 4.png', import.meta.url).toString());
+    this.load.image('forest-bg-5', new URL('../../assets/forest/Background 5.png', import.meta.url).toString());
+    const forestSliceUrls = import.meta.glob('../../assets/forest/slices/*.png', {
+      eager: true,
+      as: 'url',
+    }) as Record<string, string>;
     forestSlices.forEach((slice) => {
-      this.load.image(slice.key, new URL(`${forestSliceBase}${slice.filename}`, import.meta.url).toString());
+      const sliceUrl = forestSliceUrls[`../../assets/forest/slices/${slice.filename}`];
+      if (sliceUrl) {
+        this.load.image(slice.key, sliceUrl);
+      }
     });
   }
 
