@@ -32,7 +32,7 @@ export class Level6 implements Level {
   private iceBreakSound?: Phaser.Sound.BaseSound;
 
   private readonly config = {
-    giftSpawnDelay: 560,
+    giftSpawnDelay: 1120,
     giftSpeed: 240,
     starSpawnDelay: 780,
     starSpeed: 200,

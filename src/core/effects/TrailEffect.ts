@@ -16,6 +16,7 @@ export class TrailEffect {
   private jitterTarget = new Phaser.Math.Vector2(0, 0);
   private lastJitterAt = 0;
   private lastSnowEmitAt = 0;
+  private lastTrailEmitAt = 0;
   private isSnow = false;
   private sprite?: TrailSprite;
 
@@ -44,7 +45,7 @@ export class TrailEffect {
 
     this.trails = colors.map((color, index) => {
       const emitter = this.scene.add.particles(0, 0, textureKey, {
-        lifespan: this.isSnow ? { min: 900, max: 1500 } : { min: 900, max: 1400 },
+        lifespan: this.isSnow ? { min: 200, max: 500 } : { min: 900, max: 1400 },
         alpha: this.isSnow
           ? {
               onEmit: (particle) => {
@@ -117,8 +118,10 @@ export class TrailEffect {
     if (this.trailActive !== moving) {
       this.trailActive = moving;
       this.trails.forEach((trail) => {
-        trail.emitter.emitting = moving && !this.isSnow;
-        trail.emitter.setVisible(moving);
+        trail.emitter.emitting = false;
+        if (moving) {
+          trail.emitter.setVisible(true);
+        }
       });
     }
 
@@ -173,12 +176,17 @@ export class TrailEffect {
       return;
     }
 
+    const now = this.scene.time.now;
+    if (now - this.lastTrailEmitAt < 12) {
+      return;
+    }
+    this.lastTrailEmitAt = now;
     this.trails.forEach((trail) => {
       const x = sprite.x + back.x + side.x * trail.sideOffset + this.jitter.x;
       const y = sprite.y + back.y + side.y * trail.sideOffset + this.jitter.y;
-      trail.emitter.setPosition(x, y);
       trail.emitter.speedX = trailSpeed.x;
       trail.emitter.speedY = trailSpeed.y;
+      trail.emitter.emitParticleAt(x, y, 1);
     });
   }
 

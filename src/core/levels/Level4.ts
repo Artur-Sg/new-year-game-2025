@@ -18,7 +18,7 @@ export class Level4 implements Level {
   private sadMeow2?: Phaser.Sound.BaseSound;
 
   private readonly config = {
-    giftSpawnDelay: 620,
+    giftSpawnDelay: 1240,
     giftSpeed: 220,
     snowballSpawnDelay: 520,
     snowballSpeed: 260,

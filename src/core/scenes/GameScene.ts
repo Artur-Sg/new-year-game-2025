@@ -187,6 +187,7 @@ export class GameScene extends Phaser.Scene {
     EventBus.emit(GameEvents.TIMER_UPDATED, 0);
     this.player.resetPosition();
     this.player.setForcedAnimation(null);
+    this.foregroundEffect.reset();
 
     this.currentLevel?.destroy();
 

@@ -50,6 +50,10 @@ export class ForegroundEffect {
     this.updateGroundBase();
   }
 
+  reset(): void {
+    this.rebuild();
+  }
+
   update(delta: number): void {
     const shift = (this.speed * delta) / 1000;
     let rightmostProp = -Infinity;
@@ -78,7 +82,7 @@ export class ForegroundEffect {
         item.setScale(2);
         this.setPropItemPosition(
           item,
-          rightmostProp + item.displayWidth / 2 + nextGap + this.spawnBuffer
+          rightmostProp + item.displayWidth / 2 + nextGap
         );
         const shadow = this.propShadows[index];
         if (shadow) {
@@ -96,7 +100,7 @@ export class ForegroundEffect {
         item.setOrigin(0.5, 1);
         item.setScale(2);
         item.setDepth(5.5);
-        item.setPosition(rightmostGround + item.displayWidth / 2 + nextGap + this.spawnBuffer, this.groundY);
+        item.setPosition(rightmostGround + item.displayWidth / 2 + nextGap, this.groundY);
         this.alignGroundItem(item);
         rightmostGround = item.x + item.displayWidth / 2;
       }

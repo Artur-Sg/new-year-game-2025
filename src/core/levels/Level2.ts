@@ -6,7 +6,7 @@ export class Level2 implements Level {
   private impl: FlyingGiftsLevel;
 
   constructor(context: LevelContext, hooks: LevelHooks) {
-    this.impl = new FlyingGiftsLevel(context, hooks, { id: 2, spawnDelay: 700, giftSpeed: 220 });
+    this.impl = new FlyingGiftsLevel(context, hooks, { id: 2, spawnDelay: 1400, giftSpeed: 220 });
   }
 
   start(): void {

@@ -390,12 +390,13 @@ export class UIScene extends Phaser.Scene {
   private layout(width: number, height: number): void {
     this.updateTypography(getTextScale(width, height));
     const hudTopY = 24;
+    const starsYOffset = -8;
     const hudRowWidth = Math.min(360, Math.max(220, width - 160));
     const hudLeft = width / 2 - hudRowWidth / 2;
     const hudRight = width / 2 + hudRowWidth / 2;
     const heartSpacing = 36;
 
-    this.starsText.setPosition(hudLeft, hudTopY);
+    this.starsText.setPosition(hudLeft, hudTopY + starsYOffset);
     this.lifeHearts.forEach((heart, index) => {
       heart.setPosition(hudRight - heartSpacing * (2 - index), hudTopY);
     });
@@ -481,7 +482,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   private updateStars(payload: { stars: number }): void {
-    this.starsText.setText(`★ ${payload.stars}`);
+    this.starsText.setText(this.getStarsLabel(payload.stars));
     this.starsText.setVisible(this.starsEnabled);
   }
 
@@ -496,8 +497,15 @@ export class UIScene extends Phaser.Scene {
     this.starsEnabled = level >= 5;
     this.starsText.setVisible(this.starsEnabled);
     if (this.starsEnabled) {
-      this.starsText.setText('★ 0');
+      this.starsText.setText(this.getStarsLabel(0));
     }
+  }
+
+  private getStarsLabel(stars: number): string {
+    const total = 5;
+    const filled = Math.min(total, Math.max(0, stars));
+    const empty = total - filled;
+    return `${'★'.repeat(filled)}${'☆'.repeat(empty)}`;
   }
 
   private getBannerCopy(level: number): string {
