@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { TOUCH_SHOOT_ZONE_RATIO } from '../config/gameConfig';
 
 export class InputSystem {
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -64,6 +65,12 @@ export class InputSystem {
     if (!this.player || !pointer.isDown) {
       return;
     }
+    if (this.touchActive) {
+      return;
+    }
+    if (!this.isMovementTouch(pointer)) {
+      return;
+    }
     this.touchActive = true;
     this.touchPointerId = pointer.id;
     this.updateTouchDirection(pointer);
@@ -99,5 +106,23 @@ export class InputSystem {
       return;
     }
     this.touchDirection.copy(vector.normalize());
+  }
+
+  private isMovementTouch(pointer: Phaser.Input.Pointer): boolean {
+    if (!this.isTouchPointer(pointer)) {
+      return true;
+    }
+    return pointer.x <= this.scene.scale.width * TOUCH_SHOOT_ZONE_RATIO;
+  }
+
+  private isTouchPointer(pointer: Phaser.Input.Pointer): boolean {
+    const event = pointer.event as PointerEvent | MouseEvent | TouchEvent | undefined;
+    if (!event) {
+      return false;
+    }
+    if ('pointerType' in event) {
+      return event.pointerType === 'touch' || event.pointerType === 'pen';
+    }
+    return event.type.startsWith('touch');
   }
 }

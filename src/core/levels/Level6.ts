@@ -128,6 +128,7 @@ export class Level6 implements Level {
     }));
 
     this.shootKey = this.context.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    EventBus.on(GameEvents.SHOOT_REQUEST, this.handleShootRequest, this);
 
     this.spawnGiftTimer = this.context.scene.time.addEvent({
       delay: this.config.giftSpawnDelay,
@@ -171,10 +172,21 @@ export class Level6 implements Level {
   }
 
   private handleShooting(): void {
-    if (!this.shootKey || this.starAmmo <= 0) {
+    if (!this.shootKey) {
       return;
     }
     if (!Phaser.Input.Keyboard.JustDown(this.shootKey)) {
+      return;
+    }
+    this.tryShoot();
+  }
+
+  private handleShootRequest(): void {
+    this.tryShoot();
+  }
+
+  private tryShoot(): void {
+    if (this.starAmmo <= 0) {
       return;
     }
     this.spawnStarShot();
@@ -473,6 +485,8 @@ export class Level6 implements Level {
     this.starShootSound = undefined;
     this.iceBreakSound?.destroy();
     this.iceBreakSound = undefined;
+
+    EventBus.off(GameEvents.SHOOT_REQUEST, this.handleShootRequest, this);
 
     if (this.shootKey) {
       this.context.scene.input.keyboard?.removeKey(this.shootKey);

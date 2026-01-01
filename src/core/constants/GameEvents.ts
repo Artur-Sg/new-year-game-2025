@@ -9,6 +9,7 @@ export const GameEvents = {
   LEVEL_STARTED: 'level-started',
   LEVEL_NEXT: 'level-next',
   GAME_OVER: 'game-over',
+  SHOOT_REQUEST: 'shoot-request',
 } as const;
 
 export type GameEventKey = (typeof GameEvents)[keyof typeof GameEvents];

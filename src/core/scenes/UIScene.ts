@@ -29,6 +29,12 @@ export class UIScene extends Phaser.Scene {
   private pauseModal!: Phaser.GameObjects.Container;
   private pausePanel!: Phaser.GameObjects.Graphics;
   private pauseTitle!: Phaser.GameObjects.Text;
+  private pauseToggleButton!: Phaser.GameObjects.Container;
+  private pauseToggleLabel!: Phaser.GameObjects.Text;
+  private pauseToggleBg!: Phaser.GameObjects.Graphics;
+  private shootButton!: Phaser.GameObjects.Container;
+  private shootLabel!: Phaser.GameObjects.Text;
+  private shootBg!: Phaser.GameObjects.Graphics;
   private pauseContinueButton!: Phaser.GameObjects.Container;
   private pauseContinueLabel!: Phaser.GameObjects.Text;
   private pauseContinueBg!: Phaser.GameObjects.Graphics;
@@ -52,7 +58,10 @@ export class UIScene extends Phaser.Scene {
   private lastScore = 0;
   private escHandler?: () => void;
   private pauseKey?: Phaser.Input.Keyboard.Key;
+  private touchShootHandler?: (pointer: Phaser.Input.Pointer) => void;
   private starsEnabled = false;
+  private lastTapAt = 0;
+  private lastTapPos = new Phaser.Math.Vector2(0, 0);
   private readonly fontSizes = {
     hud: 20,
     banner: 16,
@@ -60,6 +69,8 @@ export class UIScene extends Phaser.Scene {
     modalMessage: 20,
     modalButton: 16,
   };
+  private readonly doubleTapThreshold = 260;
+  private readonly doubleTapDistance = 32;
 
   constructor() {
     super(SceneKeys.UI);
@@ -94,9 +105,11 @@ export class UIScene extends Phaser.Scene {
     this.starsText.setOrigin(0, 0);
     this.starsText.setVisible(false);
 
+    this.createShootButton();
     this.createCallToAction();
     this.createLevelCompleteText();
     this.createLevelCompleteModal();
+    this.createPauseToggleButton();
     this.createPauseModal();
     this.createGameOverModal();
     this.setupAudio();
@@ -124,6 +137,8 @@ export class UIScene extends Phaser.Scene {
       this.pauseKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC, true);
       this.pauseKey.on('down', this.escHandler);
     }
+    this.touchShootHandler = (pointer: Phaser.Input.Pointer) => this.handleDoubleTap(pointer);
+    this.input.on('pointerdown', this.touchShootHandler);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       EventBus.off(GameEvents.SCORE_UPDATED, this.updateScore, this);
@@ -140,6 +155,9 @@ export class UIScene extends Phaser.Scene {
         if (this.pauseKey) {
           this.pauseKey.off('down', this.escHandler);
         }
+      }
+      if (this.touchShootHandler) {
+        this.input.off('pointerdown', this.touchShootHandler);
       }
     });
   }
@@ -387,6 +405,49 @@ export class UIScene extends Phaser.Scene {
     this.pauseModal.setVisible(false);
   }
 
+  private createPauseToggleButton(): void {
+    this.pauseToggleBg = this.add.graphics();
+    this.pauseToggleLabel = this.add.text(0, 0, 'Пауза', {
+      color: '#0d0f1d',
+      font: toFont(this.fontSizes.modalButton, getTextScale(this.scale.width, this.scale.height)),
+    });
+    this.pauseToggleLabel.setOrigin(0.5);
+    this.pauseToggleButton = this.add.container(0, 0, [this.pauseToggleBg, this.pauseToggleLabel]);
+    this.drawPauseButton(this.pauseToggleBg, this.pauseToggleLabel, 0xffe066);
+    this.updatePauseButtonArea(this.pauseToggleButton, this.pauseToggleLabel);
+    const pauseHit = this.ensureButtonHitArea(this.pauseToggleButton, this.pauseToggleLabel);
+    pauseHit
+      .on('pointerover', () => this.drawPauseButton(this.pauseToggleBg, this.pauseToggleLabel, 0xffd447))
+      .on('pointerout', () => this.drawPauseButton(this.pauseToggleBg, this.pauseToggleLabel, 0xffe066))
+      .on('pointerup', () => {
+        this.clickSound?.play();
+        this.togglePauseModal();
+      });
+    this.pauseToggleButton.setDepth(15);
+  }
+
+  private createShootButton(): void {
+    this.shootBg = this.add.graphics();
+    this.shootLabel = this.add.text(0, 0, '★', {
+      color: '#0d0f1d',
+      font: toFont(this.fontSizes.modalButton + 10, getTextScale(this.scale.width, this.scale.height)),
+    });
+    this.shootLabel.setOrigin(0.5);
+    this.shootButton = this.add.container(0, 0, [this.shootBg, this.shootLabel]);
+    this.drawPauseButton(this.shootBg, this.shootLabel, 0xffe066);
+    this.updatePauseButtonArea(this.shootButton, this.shootLabel);
+    const shootHit = this.ensureButtonHitArea(this.shootButton, this.shootLabel);
+    shootHit
+      .on('pointerover', () => this.drawPauseButton(this.shootBg, this.shootLabel, 0xffd447))
+      .on('pointerout', () => this.drawPauseButton(this.shootBg, this.shootLabel, 0xffe066))
+      .on('pointerup', () => {
+        this.clickSound?.play();
+        EventBus.emit(GameEvents.SHOOT_REQUEST);
+      });
+    this.shootButton.setDepth(15);
+    this.shootButton.setVisible(false);
+  }
+
   private layout(width: number, height: number): void {
     this.updateTypography(getTextScale(width, height));
     const hudTopY = 24;
@@ -401,8 +462,20 @@ export class UIScene extends Phaser.Scene {
       heart.setPosition(hudRight - heartSpacing * (2 - index), hudTopY);
     });
 
+    const pauseButtonWidth = this.pauseToggleButton?.width ?? 0;
+    const pauseButtonHeight = this.pauseToggleButton?.height ?? 0;
+    const pauseX = width - 32 - pauseButtonWidth / 2;
+    const pauseY = hudTopY + pauseButtonHeight / 2 - 2;
+    this.pauseToggleButton.setPosition(pauseX, pauseY);
+
     this.scoreText.setPosition(32, hudTopY);
-    this.timerText.setPosition(width - 32, hudTopY);
+    this.timerText.setPosition(width - 32 - pauseButtonWidth - 12, hudTopY);
+
+    const shootButtonWidth = this.shootButton?.width ?? 0;
+    const shootButtonHeight = this.shootButton?.height ?? 0;
+    const shootX = width - 32 - shootButtonWidth / 2;
+    const shootY = height - 32 - shootButtonHeight / 2;
+    this.shootButton.setPosition(shootX, shootY);
 
     const bannerWidth = Math.min(520, Math.max(320, width - 80));
     const bannerHeight = 76;
@@ -444,6 +517,12 @@ export class UIScene extends Phaser.Scene {
     this.levelFinishMenuLabel.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
     this.drawPauseButton(this.levelFinishMenuBg, this.levelFinishMenuLabel, 0xffe066);
     this.updatePauseButtonArea(this.levelFinishMenuButton, this.levelFinishMenuLabel);
+    this.pauseToggleLabel.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
+    this.drawPauseButton(this.pauseToggleBg, this.pauseToggleLabel, 0xffe066);
+    this.updatePauseButtonArea(this.pauseToggleButton, this.pauseToggleLabel);
+    this.shootLabel.setStyle({ font: toFont(this.fontSizes.modalButton + 10, scale) });
+    this.drawPauseButton(this.shootBg, this.shootLabel, 0xffe066);
+    this.updatePauseButtonArea(this.shootButton, this.shootLabel);
     this.pauseTitle.setStyle({ font: toFont(this.fontSizes.modalMessage, scale) });
     this.pauseContinueLabel.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
     this.pauseExitLabel.setStyle({ font: toFont(this.fontSizes.modalButton, scale) });
@@ -496,6 +575,7 @@ export class UIScene extends Phaser.Scene {
   private setStarsVisibility(level: number): void {
     this.starsEnabled = level >= 5;
     this.starsText.setVisible(this.starsEnabled);
+    this.shootButton.setVisible(this.starsEnabled);
     if (this.starsEnabled) {
       this.starsText.setText(this.getStarsLabel(0));
     }
@@ -522,7 +602,7 @@ export class UIScene extends Phaser.Scene {
       return `Осторожно, снежки!`;
     }
     if (level === 5) {
-      return 'Буран заморозил подарки! Используй звёздочки! (ПРОБЕЛ)';
+      return 'Буран заморозил подарки! Используй звёздочки!';
     }
     if (level === 6) {
       return 'Лавина! Уклоняйся от снежков';
@@ -641,6 +721,41 @@ export class UIScene extends Phaser.Scene {
     if (gameScene.scene.isPaused()) {
       gameScene.scene.resume();
     }
+  }
+
+  private handleDoubleTap(pointer: Phaser.Input.Pointer): void {
+    if (!this.starsEnabled || !this.isTouchPointer(pointer)) {
+      return;
+    }
+    if (this.shootButton.visible) {
+      const bounds = this.shootButton.getBounds();
+      if (bounds.contains(pointer.x, pointer.y)) {
+        return;
+      }
+    }
+    const now = this.time.now;
+    const dx = pointer.x - this.lastTapPos.x;
+    const dy = pointer.y - this.lastTapPos.y;
+    const withinDistance = dx * dx + dy * dy <= this.doubleTapDistance * this.doubleTapDistance;
+    const withinTime = now - this.lastTapAt <= this.doubleTapThreshold;
+    if (withinTime && withinDistance) {
+      this.lastTapAt = 0;
+      EventBus.emit(GameEvents.SHOOT_REQUEST);
+      return;
+    }
+    this.lastTapAt = now;
+    this.lastTapPos.set(pointer.x, pointer.y);
+  }
+
+  private isTouchPointer(pointer: Phaser.Input.Pointer): boolean {
+    const event = pointer.event as PointerEvent | MouseEvent | TouchEvent | undefined;
+    if (!event) {
+      return false;
+    }
+    if ('pointerType' in event) {
+      return event.pointerType === 'touch' || event.pointerType === 'pen';
+    }
+    return event.type.startsWith('touch');
   }
 
   private drawPausePanel(width: number, height: number): void {

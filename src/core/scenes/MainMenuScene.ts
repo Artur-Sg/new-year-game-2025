@@ -559,7 +559,7 @@ export class MainMenuScene extends Phaser.Scene {
     const scale = getTextScale(width, height);
     const centerX = width / 2;
     const centerY = height / 2;
-    const text = this.add.text(centerX, centerY - 40, 'Летай на стрелках или WASD\nСобери 10 подарков, Пройди уровень! На некоторых уровнях необходимо будет стрелять используя ПРОБЕЛ', {
+    const text = this.add.text(centerX, centerY - 40, 'Летай на стрелках или WASD\nНа планшете: двигайся касанием слева, стреляй двойным тапом или кнопкой ★\nНа некоторых уровнях нужно стрелять (ПРОБЕЛ)', {
       color: '#ffffff',
       align: 'center',
       lineSpacing: 10,

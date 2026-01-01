@@ -7,6 +7,7 @@ export const GAME_HEIGHT = 540;
 export const LEVEL_ONE_TARGET = 10;
 export const UI_TEXT_SCALE = 1.7;
 export const UI_FONT_FAMILY = '"TMVinograd", serif';
+export const TOUCH_SHOOT_ZONE_RATIO = 0.62;
 
 export function getTextScale(width: number, height: number): number {
   const scale = Math.min(width / GAME_WIDTH, height / GAME_HEIGHT);
