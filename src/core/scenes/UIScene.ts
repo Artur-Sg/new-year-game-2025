@@ -88,7 +88,7 @@ export class UIScene extends Phaser.Scene {
     });
     this.timerText.setOrigin(1, 0);
 
-    this.lifeHearts = Array.from({ length: 3 }, (_, index) => {
+    this.lifeHearts = Array.from({ length: 9 }, (_, index) => {
       const heart = this.add.text(GAME_WIDTH / 2 + index * 20, 24, '♥', {
         color: '#ff4d6d',
         font: toFont(this.fontSizes.hud, getTextScale(this.scale.width, this.scale.height)),
@@ -115,7 +115,7 @@ export class UIScene extends Phaser.Scene {
     this.setupAudio();
     this.layout(this.scale.width, this.scale.height);
     const initialLevel = getActiveLevelId();
-    const initialLives = initialLevel === 4 || initialLevel === 6 || initialLevel === 7 ? 3 : 0;
+    const initialLives = initialLevel === 4 || initialLevel === 6 || initialLevel === 7 ? 9 : 0;
     this.updateLives({ lives: initialLives });
     this.setStarsVisibility(initialLevel);
 
@@ -455,11 +455,12 @@ export class UIScene extends Phaser.Scene {
     const hudRowWidth = Math.min(360, Math.max(220, width - 160));
     const hudLeft = width / 2 - hudRowWidth / 2;
     const hudRight = width / 2 + hudRowWidth / 2;
-    const heartSpacing = 36;
+    const heartSpacing = Math.min(30, Math.max(18, (hudRowWidth - 40) / 8));
 
     this.starsText.setPosition(hudLeft, hudTopY + starsYOffset);
+    const heartOffset = this.lifeHearts.length - 1;
     this.lifeHearts.forEach((heart, index) => {
-      heart.setPosition(hudRight - heartSpacing * (2 - index), hudTopY);
+      heart.setPosition(hudRight - heartSpacing * (heartOffset - index), hudTopY);
     });
 
     const pauseButtonWidth = this.pauseToggleButton?.width ?? 0;
@@ -540,7 +541,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   private updateScore(payload: { current: number; target: number }): void {
-    this.scoreText.setText(`Подарки: ${payload.current}/${payload.target}`);
+    if (payload.target <= 0) {
+      this.scoreText.setText(`Подарки: ${payload.current}`);
+    } else {
+      this.scoreText.setText(`Подарки: ${payload.current}/${payload.target}`);
+    }
     if (payload.current > this.lastScore) {
       this.pickSound?.play({ seek: 0.3 });
     }
@@ -609,6 +614,9 @@ export class UIScene extends Phaser.Scene {
     }
     if (level === 7) {
       return 'Бонусный уровень: продержись как можно дольше!';
+    }
+    if (level === 8) {
+      return 'Бонус: бесконечные подарки и заморозка! Размораживай звёздочками';
     }
     return 'Бонусный уровень: продержись как можно дольше!';
   }

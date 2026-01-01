@@ -5,7 +5,7 @@ let unlockedLevelId = 1;
 try {
   const stored = Number(localStorage.getItem(STORAGE_KEY));
   if (!Number.isNaN(stored) && stored > 0) {
-    unlockedLevelId = stored;
+    unlockedLevelId = stored === 7 ? 8 : stored;
   }
 } catch {
   // Ignore storage when unavailable.
@@ -24,10 +24,11 @@ export function getUnlockedLevelId(): number {
 }
 
 export function unlockLevel(id: number): void {
-  if (id <= unlockedLevelId) {
+  const resolvedId = id === 7 ? 8 : id;
+  if (resolvedId <= unlockedLevelId) {
     return;
   }
-  unlockedLevelId = id;
+  unlockedLevelId = resolvedId;
   try {
     localStorage.setItem(STORAGE_KEY, String(unlockedLevelId));
   } catch {

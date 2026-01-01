@@ -139,13 +139,17 @@ export class MainMenuScene extends Phaser.Scene {
       const code = event.code;
       const key = event.key;
       const isKey7 = code === 'Digit7' || code === 'Numpad7' || key === '7';
-      if (!isKey7) {
+      const isKey8 = code === 'Digit8' || code === 'Numpad8' || key === '8';
+      if (!isKey7 && !isKey8) {
         return;
       }
-      if (getUnlockedLevelId() < 7) {
+      if (isKey7 && getUnlockedLevelId() < 7) {
         return;
       }
-      this.selectedLevelId = 7;
+      if (isKey8 && getUnlockedLevelId() < 8) {
+        return;
+      }
+      this.selectedLevelId = isKey8 ? 8 : 7;
       this.updateLevelSelection();
       this.sound.play('sfx-game-start', { volume: 0.7 });
       void this.startGame();
@@ -389,7 +393,7 @@ export class MainMenuScene extends Phaser.Scene {
       const frame = this.add.graphics();
       this.drawRoundedFrame(frame, this.levelFrameSize, 0x334155);
 
-      const label = level === 7 ? 'Бонус' : String(level);
+      const label = level === 7 ? 'Бонус' : level === 8 ? 'Бонус 2' : String(level);
       const text = this.add.text(0, 0, label, {
         color: '#a5c6ff',
         font: toFont(this.fontSizes.levelOption, getTextScale(this.scale.width, this.scale.height)),

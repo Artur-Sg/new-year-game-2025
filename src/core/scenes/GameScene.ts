@@ -16,6 +16,7 @@ import { Level4 } from '../levels/Level4';
 import { Level5 } from '../levels/Level5';
 import { Level6 } from '../levels/Level6';
 import { Level7 } from '../levels/Level7';
+import { Level8 } from '../levels/Level8';
 import { InputSystem } from '../systems/InputSystem';
 import { GameState } from '../state/GameState';
 import { BackdropEffect } from '../effects/BackdropEffect';
@@ -103,6 +104,7 @@ export class GameScene extends Phaser.Scene {
       const isKey5 = code === 'Digit5' || code === 'Numpad5' || key === '5';
       const isKey6 = code === 'Digit6' || code === 'Numpad6' || key === '6';
       const isKey7 = code === 'Digit7' || code === 'Numpad7' || key === '7';
+      const isKey8 = code === 'Digit8' || code === 'Numpad8' || key === '8';
 
       if (isKey1) {
         this.startLevel(1);
@@ -118,6 +120,8 @@ export class GameScene extends Phaser.Scene {
         this.startLevel(6);
       } else if (isKey7) {
         this.startLevel(7);
+      } else if (isKey8) {
+        this.startLevel(8);
       } else if (isKeyK) {
         const nextSkin = getActiveSkin() === 'cat-hero' ? 'xmascat' : 'cat-hero';
         setActiveSkin(nextSkin);
@@ -178,7 +182,8 @@ export class GameScene extends Phaser.Scene {
     this.levelCompleted = false;
     this.playLevelMusic(id);
     this.state.start();
-    this.state.setLives(id === 4 || id === 6 || id === 7 ? 3 : 0);
+    this.giftsTarget = id >= 7 ? 0 : LEVEL_ONE_TARGET;
+    this.state.setLives(id === 4 || id === 6 || id === 7 ? 9 : 0);
     EventBus.emit(GameEvents.LIVES_UPDATED, { lives: this.state.getLives() });
     EventBus.emit(GameEvents.STARS_UPDATED, { stars: 0 });
     EventBus.emit(GameEvents.LEVEL_STARTED, { level: id });
@@ -216,7 +221,7 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         this.levelCompleted = true;
         const nextLevel = this.level + 1;
-        if (nextLevel <= 7) {
+        if (nextLevel <= 8) {
           unlockLevel(nextLevel);
         }
         EventBus.emit(GameEvents.LEVEL_COMPLETED, { level: this.level });
@@ -249,7 +254,11 @@ export class GameScene extends Phaser.Scene {
       return new Level6(context, hooks);
     }
 
-    return new Level7(context, hooks);
+    if (id === 7) {
+      return new Level7(context, hooks);
+    }
+
+    return new Level8(context, hooks);
   }
 
   private ensureGiftTexture(): void {
@@ -345,7 +354,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   private playLevelMusic(levelId: number): void {
-    const key = `bgm-${levelId}`;
+    const resolvedLevelId = levelId === 8 ? 7 : levelId;
+    const key = `bgm-${resolvedLevelId}`;
+    if (!this.cache.audio.exists(key)) {
+      this.levelMusic?.stop();
+      this.levelMusic?.destroy();
+      this.levelMusic = undefined;
+      this.levelMusicKey = undefined;
+      return;
+    }
     if (this.levelMusicKey === key && this.levelMusic?.isPlaying) {
       return;
     }
