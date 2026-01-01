@@ -72,7 +72,7 @@ export class GameScene extends Phaser.Scene {
     this.trailEffect = new TrailEffect(this);
     this.trailEffect.create(this.player.getCollider(), this.playerSkin);
 
-    this.inputSystem = new InputSystem(this);
+    this.inputSystem = new InputSystem(this, this.player.getCollider());
 
     this.state.start();
     EventBus.emit(GameEvents.READY);

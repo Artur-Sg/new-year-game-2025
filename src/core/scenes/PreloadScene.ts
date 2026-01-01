@@ -168,6 +168,11 @@ export class PreloadScene extends Phaser.Scene {
     intro.setVolume(1);
     this.introVideo = intro;
 
+    const videoEl = (intro as Phaser.GameObjects.Video & { video?: HTMLVideoElement | null }).video;
+    if (videoEl) {
+      videoEl.style.pointerEvents = 'none';
+    }
+
     intro.once('created', (_video: Phaser.GameObjects.Video, sourceWidth: number, sourceHeight: number) => {
       this.introSourceWidth = sourceWidth;
       this.introSourceHeight = sourceHeight;
